@@ -1,0 +1,1029 @@
+{
+  "name": "PHASE 2C - REVISION REPLY CAPTURE",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 📥 PHASE 2C: REVISION REPLY CAPTURE (State Machine)\n\n### 📌 OVERVIEW\nA session-based, fault-tolerant natural language processor triggered by the **Master Router**. It intercepts plain-text messages from administrators, checks for active revision locks, translates messy human instructions into structured database commands, and executes parallel updates to both Supabase and Google Sheets.\n\n---\n\n### 🗺️ ARCHITECTURAL FLOW & BLOCKS\n\n#### 🔒 1. Session Validation Gate\n- Bypasses raw Telegram polling; receives merged payloads from the Master Router.\n- Queries `pending_revisions` in Supabase using the isolated `telegram_id`. \n- **Silent Exit:** If no session is found, the workflow gracefully terminates without acting on casual chat.\n\n#### ❌ 2. Ghost Session Mitigation (Cancel Path)\n- Evaluates the incoming text for the `/cancel` slash command.\n- If true, instantly flushes the `pending_revisions` lock and issues a clearance confirmation to the user, preventing downstream misroutes.\n\n#### 🤖 3. Fault-Tolerant AI Parsing\n- Replaces rigid Regex parameters with **Google Gemini (2.5 Flash)** to process natural human language (typos, shorthand, multi-day groupings).\n- Enforces a strict schema-locked JSON output constraint: `[{\"day\": N, \"comment\": \"...\"}]`.\n- A JavaScript processing block safely strips markdown fences and validates the array format. \n- **Fallback:** If zero days are detected, halts execution and prompts the user to rephrase their request.\n\n#### 🗄️ 4. Asset Synchronization Loop\n- **Session Cleanup:** Immediately deletes the `pending_revisions` lock to prevent accidental double-entries.\n- **Data Splitter:** Deconstructs the parsed JSON array into independent n8n items for concurrent looping.\n- **Parallel Updates:**\n  • **Supabase:** Targets the `Content_Calendar` table, updating the exact row matching `client_id` + `day_number` with the requested comment.\n  • **Google Sheets:** Queries the live client spreadsheet and writes the text payload directly to the corresponding `Day Number` row in the Comment column.\n\n#### ✅ 5. Confirmation & Handoff\n- Aggregates the processed loop items.\n- Dispatches a formatted Markdown summary to the Telegram client, explicitly listing every day flagged and the corresponding instruction captured by the AI.",
+        "height": 1784,
+        "width": 3760,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        -448
+      ],
+      "id": "a4ad524b-5ef6-4951-a21b-e5f206bbadc9",
+      "name": "Header Note"
+    },
+    {
+      "parameters": {
+        "content": "## 🔍 STEP 1 — Intercept & Route\nEvery text message hits this trigger. The workflow immediately checks Pending_Revisions by telegram_id. If no session exists, the FALSE branch produces no output — the workflow silently exits without reacting to normal chatter.\n\nIf a session IS found, the next check handles /cancel before any parsing begins.",
+        "height": 456,
+        "width": 892,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        512
+      ],
+      "id": "55e4a7c6-e681-47d9-89d0-f97760a736c0",
+      "name": "Step 1 Note"
+    },
+    {
+      "parameters": {
+        "content": "## ❌ FIX 1 — Ghost Session Trap\nIf the admin types /cancel at any point while a session is open, this branch immediately deletes their Pending_Revisions row and sends a clear confirmation. The session is gone — future messages will not be misrouted.",
+        "height": 328,
+        "width": 732
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        864,
+        880
+      ],
+      "id": "0f945988-752d-439b-bf9c-c4fb1845da5a",
+      "name": "Cancel Note"
+    },
+    {
+      "parameters": {
+        "content": "## 🤖 FIX 3 — LLM Parsing (No Regex)\nInstead of fragile regex, the admin's raw message is passed to GPT-4o-mini with a strict JSON-only prompt. It handles typos, casual phrasing, and multi-day messages naturally. The Code node below safely parses the returned JSON array and validates it has at least one item before proceeding.",
+        "height": 424,
+        "width": 748,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        896,
+        432
+      ],
+      "id": "f569af3e-b416-449a-b465-dadfe366839b",
+      "name": "LLM Note"
+    },
+    {
+      "parameters": {
+        "content": "## 💾 STEP 3 — Save & Confirm\nEach item from the LLM array (one per day) is looped through: Supabase Content_Calendar updated with the comment for that specific day_number + client_id, then Google Sheets Comment column updated matched by Day Number. Session deleted before the loop. Telegram confirmation lists every day and its comment.",
+        "height": 504,
+        "width": 940,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2320,
+        320
+      ],
+      "id": "c52bb5df-9438-41b9-abe7-b2c379232d80",
+      "name": "Step 3 Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $input.first().json.message;\nif (!msg || !msg.text) return [];\nreturn [{\n  json: {\n    telegram_id: msg.from.id,\n    chat_id: msg.chat.id,\n    text: msg.text\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        736
+      ],
+      "id": "4883e436-e634-46f4-9067-c1828db3546f",
+      "name": "Logic: Parse Incoming Message"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "pending_revisions",
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "telegram_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.telegram_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        256,
+        736
+      ],
+      "id": "d5b9c51a-22ba-47dc-bc8f-4ab147005465",
+      "name": "DB: Check Pending Revision",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-has-client",
+              "leftValue": "={{ $json.client_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        480,
+        736
+      ],
+      "id": "83a649e1-cb1c-452c-b42c-7078c313105a",
+      "name": "Logic: Has Pending Revision?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-is-cancel",
+              "leftValue": "={{ $('Logic: Parse Incoming Message').first().json.text.trim() }}",
+              "rightValue": "/cancel",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        704,
+        736
+      ],
+      "id": "b9287d09-8c74-48e0-96c9-94713b199b6b",
+      "name": "Logic: Is Cancel Command?"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "pending_revisions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "telegram_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Logic: Parse Incoming Message').first().json.telegram_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1008,
+        1008
+      ],
+      "id": "0682d993-2eeb-4db3-8d60-930c34291e64",
+      "name": "DB: Delete Session on Cancel",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Logic: Parse Incoming Message').first().json.chat_id }}",
+        "text": "🚫 *Revision cancelled.*\n\nYour session has been cleared. When you're ready, click the Revise button again on the content plan.",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1296,
+        1008
+      ],
+      "id": "d86a5a5a-2fc2-4642-bce7-2fe84a9d60f7",
+      "name": "Telegram: Send Cancel Confirmation",
+      "webhookId": "rev-cancel-confirm-wh",
+      "credentials": {
+        "telegramApi": {
+          "id": "Gg4nrOPfTddNGNV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Safely extract content from Gemini, OpenAI, or LangChain responses\nconst content = $json.text ?? $json.output ?? $json.candidates?.[0]?.content?.parts?.[0]?.text ?? $json.message?.content ?? $json.choices?.[0]?.message?.content ?? '';\n\nlet parsed = [];\ntry {\n  // Strip any accidental markdown fences the model might add\n  const cleaned = content.replace(/```json|```/g, '').trim();\n  parsed = JSON.parse(cleaned);\n  if (!Array.isArray(parsed)) parsed = [];\n} catch (e) {\n  parsed = [];\n}\n\n// Attach client context and chat_id to every item\nconst clientId = $('Logic: Has Pending Revision?').first().json.client_id;\nconst chatId = $('Logic: Parse Incoming Message').first().json.chat_id;\n\nif (parsed.length === 0) {\n  return [{ json: { items: [], client_id: clientId, chat_id: chatId } }];\n}\n\nreturn [{\n  json: {\n    items: parsed,\n    client_id: clientId,\n    chat_id: chatId\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        640
+      ],
+      "id": "493d3c21-9ac4-4ba5-bdaf-43683d20e243",
+      "name": "Logic: Parse LLM JSON Response"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-has-items",
+              "leftValue": "={{ $json.items.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1504,
+        640
+      ],
+      "id": "1ea12b1c-f384-4c2a-9f4f-db0be2be80f4",
+      "name": "Logic: Did LLM Find Days?"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "🤔 *I couldn't figure out which days you meant.*\n\nPlease try again. You can be casual — just mention day numbers somewhere.\n\nExamples:\n• `Day 3, Day 7 — make the tone more casual`\n• `days 5 and 9 need a stronger CTA`\n• `d3 funnier, d12 focus on the discount`\n\nOr type /cancel to exit.",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1728,
+        736
+      ],
+      "id": "a2d93e0d-80d2-4102-931a-e0773c62fb96",
+      "name": "Telegram: Ask to Rephrase",
+      "webhookId": "rev-rephrase-wh",
+      "credentials": {
+        "telegramApi": {
+          "id": "Gg4nrOPfTddNGNV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "Clients",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $json.client_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        544
+      ],
+      "id": "88edf67e-a4e7-43bd-b1bb-ad5cfc7dbf20",
+      "name": "DB: Get Client Sheets ID",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "pending_revisions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "telegram_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Logic: Parse Incoming Message').first().json.telegram_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1952,
+        544
+      ],
+      "id": "dd77bd97-45b6-475b-893f-e155712752cd",
+      "name": "DB: Delete Pending Session",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split the LLM items array into individual n8n items for looping\nconst parsed = $('Logic: Parse LLM JSON Response').first().json;\nconst sheetsId = $('DB: Get Client Sheets ID').first().json.sheets_id;\n\nreturn parsed.items.map(item => ({\n  json: {\n    client_id: parsed.client_id,\n    chat_id: parsed.chat_id,\n    day_number: item.day,\n    comment: item.comment,\n    sheets_id: sheetsId,\n    'Day Number': String(item.day)\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2176,
+        544
+      ],
+      "id": "e1d342b7-9924-4efa-9f92-6c435c0b0f0f",
+      "name": "Logic: Split Items for Loop"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Content_Calendar",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.client_id }}"
+            },
+            {
+              "keyName": "day_number",
+              "condition": "eq",
+              "keyValue": "={{ String($json.day_number) }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "comment",
+              "fieldValue": "={{ $json.comment }}"
+            },
+            {
+              "fieldId": "updated_at",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "Revision_Requested"
+            },
+            {
+              "fieldId": "revision_flagged",
+              "fieldValue": "={{ true }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2400,
+        544
+      ],
+      "id": "530ca6a1-ce1f-4a43-84eb-7980da1637a2",
+      "name": "DB: Save Comment to Calendar Day",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Logic: Split Items for Loop').item.json.sheets_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Content Calendar",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": 0,
+            "Day Number": "={{ $('Logic: Split Items for Loop').item.json['Day Number'] }}",
+            "Status": "Revision_Requested",
+            "Comment": "={{ $('Logic: Split Items for Loop').item.json.comment }}"
+          },
+          "matchingColumns": [
+            "Day Number"
+          ],
+          "schema": [
+            {
+              "id": "Day Number",
+              "displayName": "Day Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Format",
+              "displayName": "Format",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Core Topic",
+              "displayName": "Core Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Image Description",
+              "displayName": "Image Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Keywords",
+              "displayName": "Keywords",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "CTA",
+              "displayName": "CTA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Posting Date",
+              "displayName": "Posting Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Slide 1",
+              "displayName": "Slide 1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Slide 2",
+              "displayName": "Slide 2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Slide 3",
+              "displayName": "Slide 3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Slide 4",
+              "displayName": "Slide 4",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Slide 5",
+              "displayName": "Slide 5",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Slide 6",
+              "displayName": "Slide 6",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Slide 7",
+              "displayName": "Slide 7",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Done By",
+              "displayName": "Done By",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Post Copy",
+              "displayName": "Post Copy",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Hashtags",
+              "displayName": "Hashtags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Output Assets",
+              "displayName": "Output Assets",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Comment",
+              "displayName": "Comment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Live Links",
+              "displayName": "Live Links",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2624,
+        544
+      ],
+      "id": "d251e71c-f6ce-476d-a7e5-b29c4f6f18c9",
+      "name": "Sheets: Save Comment per Day",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "cxrImtgrJYgfX5Xt",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "results",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2848,
+        544
+      ],
+      "id": "b2ba36cb-495e-48f1-aa64-b14775b9a592",
+      "name": "Aggregate Results"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Logic: Parse LLM JSON Response').first().json.chat_id }}",
+        "text": "={{ '✅ *Revision comments saved!*\\n\\n' + $('Logic: Parse LLM JSON Response').first().json.items.map(i => '📌 *Day ' + i.day + ':* ' + i.comment).join('\\n') + '\\n\\nSupabase and Google Sheets have been updated. The team will begin revisions.' }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3072,
+        544
+      ],
+      "id": "2918875d-937c-472d-ad24-942b08ecd053",
+      "name": "Telegram: Send Revision Saved Confirmation",
+      "webhookId": "rev-saved-confirm-wh",
+      "credentials": {
+        "telegramApi": {
+          "id": "Gg4nrOPfTddNGNV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "==You are a revision parser for a social media content management system. Your only job is to extract day numbers and revision instructions from an admin's message.\n\nRules:\n- Return ONLY a valid JSON array. No explanation, no markdown, no code fences.\n- Each object must have exactly two keys: \"day\" (integer) and \"comment\" (string).\n- If one comment applies to multiple days, repeat the comment for each day as a separate object.\n- If you cannot find any day numbers, return an empty array: []\n\nExamples:\nInput: \"Day 3, Day 7 — make the tone more casual\"\nOutput: [{\"day\":3,\"comment\":\"make the tone more casual\"},{\"day\":7,\"comment\":\"make the tone more casual\"}]\n\nInput: \"d3 needs to be funnier and day 12 should focus more on the discount offer\"\nOutput: [{\"day\":3,\"comment\":\"needs to be funnier\"},{\"day\":12,\"comment\":\"focus more on the discount offer\"}]\n\nInput: \"days 5 and 9 - change the CTA to Learn More\"\nOutput: [{\"day\":5,\"comment\":\"change the CTA to Learn More\"},{\"day\":9,\"comment\":\"change the CTA to Learn More\"}]\n\nMessage to parse:\n{{ $('Logic: Parse Incoming Message').first().json.text }}"
+            }
+          ]
+        },
+        "simplify": false,
+        "jsonOutput": true,
+        "builtInTools": {},
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        928,
+        640
+      ],
+      "id": "35df6159-389f-41a9-be98-948651262451",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "LMokzqlptXWbawE6",
+          "name": "content management api"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -144,
+        736
+      ],
+      "id": "b9439c00-17a6-4064-a3cb-68defe629cba",
+      "name": "When Executed by Another Workflow"
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "message": {
+            "message_id": 2261,
+            "from": {
+              "id": 8244436566,
+              "is_bot": false,
+              "first_name": "Naeem",
+              "username": "afsa_telegram",
+              "language_code": "en"
+            },
+            "chat": {
+              "id": 8244436566,
+              "first_name": "Naeem",
+              "username": "afsa_telegram",
+              "type": "private"
+            },
+            "date": 1778779241,
+            "text": "make day 7 and 11 more casual"
+          },
+          "callback_query": null,
+          "current_status": "IDLE",
+          "role": "Admin",
+          "is_active": true
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Logic: Parse Incoming Message": {
+      "main": [
+        [
+          {
+            "node": "DB: Check Pending Revision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Check Pending Revision": {
+      "main": [
+        [
+          {
+            "node": "Logic: Has Pending Revision?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logic: Has Pending Revision?": {
+      "main": [
+        [
+          {
+            "node": "Logic: Is Cancel Command?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logic: Is Cancel Command?": {
+      "main": [
+        [
+          {
+            "node": "DB: Delete Session on Cancel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Delete Session on Cancel": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Send Cancel Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logic: Parse LLM JSON Response": {
+      "main": [
+        [
+          {
+            "node": "Logic: Did LLM Find Days?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logic: Did LLM Find Days?": {
+      "main": [
+        [
+          {
+            "node": "DB: Get Client Sheets ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram: Ask to Rephrase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Get Client Sheets ID": {
+      "main": [
+        [
+          {
+            "node": "DB: Delete Pending Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Delete Pending Session": {
+      "main": [
+        [
+          {
+            "node": "Logic: Split Items for Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logic: Split Items for Loop": {
+      "main": [
+        [
+          {
+            "node": "DB: Save Comment to Calendar Day",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Save Comment to Calendar Day": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Save Comment per Day",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Save Comment per Day": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Results": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Send Revision Saved Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Logic: Parse LLM JSON Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Logic: Parse Incoming Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "fe1e2c09-2b21-4597-bd1e-85011ca11fef",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "27691624a7c7d2a9124a20717f3db6f18f26825f3de4bc41f1be750963b9ae26"
+  },
+  "id": "pyAnwfatkHU0UWNm",
+  "tags": []
+}

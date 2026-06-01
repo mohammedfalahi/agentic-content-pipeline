@@ -1,0 +1,1619 @@
+{
+  "name": "PHASE 3A — AUTOMATED PRODUCTION ENGINE",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Content_Calendar",
+        "limit": 500,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "posting_date",
+              "condition": "gte",
+              "keyValue": "={{ DateTime.now().startOf('week').plus({days:0}).toISODate() }}"
+            },
+            {
+              "keyName": "posting_date",
+              "condition": "lte",
+              "keyValue": "={{ DateTime.now().startOf('week').plus({days:6}).toISODate() }}"
+            },
+            {
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "Plan_Approved"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1392,
+        128
+      ],
+      "id": "8242012f-3d22-4d15-860d-26d99593e71e",
+      "name": "DB: Get All Plan_Approved Rows",
+      "alwaysOutputData": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1616,
+        128
+      ],
+      "id": "0ceb11b1-53ad-4602-9c4f-f20c7fde41df",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Clients",
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.client_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1840,
+        -112
+      ],
+      "id": "e032aec1-3db7-491a-8560-0fed4eef1201",
+      "name": "DB: Get Client Details",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3-flash-preview",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3-flash-preview"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are the lead B2B social copywriter for {{ $json.client_name }}, a renewable-energy manufacturer selling to procurement and technical decision-makers across the Middle East and Africa. Write final, publish-ready copy for ONE post. Every line must earn its place: specific, credible, unmistakably on-brand.\n\n=== BRAND ===\nTone: {{ $json.brand_guidelines.tone }}\nCore message: {{ $json.brand_guidelines.messaging }}\nValues: {{ $json.brand_guidelines.values }}\nSlogans (use at most one, only if it lands naturally): {{ $json.brand_guidelines.slogans }}\nProducts (use real names; never invent specs or numbers): {{ $json.product_catalog }}\nContent themes: {{ $json.content_themes }}\nVoice: write as the brand — first-person plural (\"we\", \"our\"). Confident, not boastful.\n\n=== AUDIENCE ===\nWho: {{ $json.target_audience.demographics }}\nSegments: {{ $json.target_audience.segments }}\nPain points: {{ $json.target_audience.pain_points }}\nBuyer tier: {{ $json.target_audience.income_tier }}\nCompetitor context (if not empty, use for sharp differentiation; if empty, focus solely on own strengths — never invent rivals): {{ $json.target_audience.competitor_context }}\n\n=== THIS POST ===\nPlatform: {{ $('Loop Over Items').item.json.target_platform }}\nFormat: {{ $('Loop Over Items').item.json.format }}\nCore topic: {{ $('Loop Over Items').item.json.core_topic }}\nStrategic angle (the single POINT this post must land): {{ $('Loop Over Items').item.json.strategic_angle }}\nPrimary keyword (weave in ONCE, naturally): {{ $('Loop Over Items').item.json.keyword_to_use }}\nCTA: {{ $('Loop Over Items').item.json.cta }}\nCTA link: {{ $('Loop Over Items').item.json.cta_url }}\nCarousel draft (if any): {{ $('Loop Over Items').item.json.carousel_content }}\nWrite in Arabic: {{ $('Loop Over Items').item.json.arabic_required }}\n\n=== THINK FIRST (silently — do not output your reasoning) ===\nPick the ONE pain point this post answers. Decide the hook angle. Choose which real product (if any) supports the strategic angle. Then write.\n\n=== HOOK ===\nThe first line decides everything. Use one of: a sharp question the buyer actually asks, a specific claim about the problem, a myth-busting/contrarian line, or a direct pain-point callout. No throat-clearing, no slogan as the opener.\n\n=== PLATFORM RULES (apply to Platform above) ===\n- LinkedIn: 1300-1900 chars, authoritative, insight-led, line breaks for skimmability, 3-5 hashtags, minimal emoji.\n- Instagram: tight hook, short scannable paragraphs, tasteful emoji, 5-10 hashtags.\n- Facebook: conversational, community tone, 1-2 hashtags.\n- Pinterest: keyword-rich descriptive copy, search-friendly, 2-5 hashtags.\n\n=== FORMAT RULES (apply to Format above) ===\n- post / image: one cohesive caption built around the angle.\n- carousel: expand the draft into slide_1..slide_7 using the structure below. post_copy = a standalone caption accompanying the carousel, written for the platform rules above.\n- infographic: tease the key data insight and invite the reader to view the graphic; do NOT restate every figure.\n- article: post_copy = a 600-1000 word structured thought-leadership piece (clear intro, 2-4 subsections, conclusion, CTA). Hook = the headline.\n\n=== CAROUSEL STRUCTURE (when Format is carousel) ===\nEach slide has THREE parts:\n1. headline — 3 to 6 words, bold and punchy. This becomes the large text on the image.\n2. subtitle — 1 short sentence, max 12 words. This appears as small body text on the image below the headline.\n3. body — 1 to 2 sentences of supporting detail for the caption. Never shown on the image.\n\nSlide roles:\n- slide_1: Hook — stop the scroll. Headline is the sharpest line. Subtitle teases what's inside.\n- slide_2: Problem — name the specific pain point concretely.\n- slide_3: Proof or insight — a real fact, trend, or observation that validates the problem.\n- slide_4: Product or solution — reference a real catalog product if it fits; otherwise the approach.\n- slide_5: Benefit — the concrete outcome the buyer gets.\n- slide_6: Use case — one real scenario, region, or application where this applies.\n- slide_7: CTA — close with action. Headline is the CTA. Subtitle has the CTA link.\n\n=== BANNED PHRASES (they scream AI-written) ===\nunlock, elevate, leverage, seamless, robust, game-changer, revolutionize, \"in today's fast-paced world\", \"look no further\", \"the future of\", \"we are excited to\". Use plain, concrete, specific language instead.\n\n=== RULES ===\n1. Address ONE specific pain point; make it concrete (region, environment, scale).\n2. Speak to B2B procurement / technical decision-makers, not consumers.\n3. Reference a real catalog product only when it supports the angle; never fabricate specs, prices, or figures.\n4. Weave the primary keyword in once. No stuffing.\n5. End post_copy with the CTA; put the CTA link on its own final line.\n6. If Write in Arabic is true, write hook + post_copy in Modern Standard Arabic; keep hashtags in English.\n7. If Format is carousel, populate carousel_content with keys slide_1..slide_7 using the schema below; otherwise carousel_content = null.\n8. No competitor names. No unverifiable claims. No war, political, or government-sensitive references.\n9. alt_text must factually describe the intended image for accessibility and SEO.\n10. Output ONLY raw JSON — no markdown, no code fences, no commentary.\n11. If Format is NOT carousel, carousel_content MUST be null — never an object, never an array.\n=== OUTPUT SCHEMA ===\n{\n  \"hook\": \"First-line scroll-stopper (or headline for article).\",\n  \"post_copy\": \"Full caption/body: hook + body + CTA, CTA link on its own final line.\",\n  \"hashtags\": \"#Tag1 #Tag2 (platform-appropriate count)\",\n  \"carousel_content\": null,\n  \"alt_text\": \"1-2 sentence factual description of the image.\"\n}\n\nWhen Format is carousel, carousel_content MUST be:\n{\n  \"slide_1\": { \"headline\": \"3-6 word hook\", \"subtitle\": \"One short sentence max 12 words.\", \"body\": \"1-2 supporting sentences for caption.\" },\n  \"slide_2\": { \"headline\": \"...\", \"subtitle\": \"...\", \"body\": \"...\" },\n  \"slide_3\": { \"headline\": \"...\", \"subtitle\": \"...\", \"body\": \"...\" },\n  \"slide_4\": { \"headline\": \"...\", \"subtitle\": \"...\", \"body\": \"...\" },\n  \"slide_5\": { \"headline\": \"...\", \"subtitle\": \"...\", \"body\": \"...\" },\n  \"slide_6\": { \"headline\": \"...\", \"subtitle\": \"...\", \"body\": \"...\" },\n  \"slide_7\": { \"headline\": \"...\", \"subtitle\": \"...\", \"body\": \"...\" }\n}"
+            }
+          ]
+        },
+        "simplify": false,
+        "jsonOutput": true,
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        2064,
+        -112
+      ],
+      "id": "1a9c9a0b-df48-43a9-aca2-d71891c582e7",
+      "name": "AI: Generate Post Copy",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "LMokzqlptXWbawE6",
+          "name": "content management api"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Code: Parse Copy Response\n// Extracts the JSON object from Gemini's candidates response.\n// Merges it with the original content row and client asset fields.\n// Uses .item (not .first) so data is correctly paired per loop iteration.\n// ============================================================\n\nconst rawText = $input.first().json.candidates[0].content.parts[0].text;\n\nconst cleanedText = rawText\n  .replace(/^```json\\s*/i, '')\n  .replace(/^```\\s*/i, '')\n  .replace(/```\\s*$/i, '')\n  .trim();\n\ntry {\n  const parsed = JSON.parse(cleanedText);\n\n  // .item gives the paired item for THIS loop iteration (not always the first)\n  const contentRow = $('Loop Over Items').item.json;\n  const client = $('DB: Get Client Details').item.json;\n\n  return [{\n    json: {\n      // Content row identifiers needed downstream\n      id:              contentRow.id,\n      client_id:       contentRow.client_id,\n      day_number:      contentRow.day_number,\n      format:          contentRow.format,\n      core_topic:      contentRow.core_topic,\n      image_prompt:    contentRow.image_prompt,\n      keywords:        contentRow.keywords,\n      cta:             contentRow.cta,\n      posting_date:    contentRow.posting_date,\n      // Generated copy from Gemini\n      post_copy:         parsed.post_copy,\n      hashtags:          parsed.hashtags,\n      carousel_content:  parsed.carousel_content,\n      // after carousel_content: parsed.carousel_content,\n      slide_1_body: parsed.carousel_content?.slide_1?.body ?? '',\n      slide_2_body: parsed.carousel_content?.slide_2?.body ?? '',\n      slide_3_body: parsed.carousel_content?.slide_3?.body ?? '',\n      slide_4_body: parsed.carousel_content?.slide_4?.body ?? '',\n      slide_5_body: parsed.carousel_content?.slide_5?.body ?? '',\n      slide_6_body: parsed.carousel_content?.slide_6?.body ?? '',\n      slide_7_body: parsed.carousel_content?.slide_7?.body ?? '',\n      // Client asset references — use .item not .first to avoid cross-client corruption\n      drive_folder_id:  client.drive_folder_id,\n      drive_folder_url: 'https://drive.google.com/drive/folders/' + client.drive_folder_id,\n      sheets_id:        client.sheets_id,\n      logo_url: client.logo_url,\n      target_platform:  contentRow.target_platform,\n      strategic_angle:  contentRow.strategic_angle,\n      keyword_to_use:   contentRow.keyword_to_use,\n      cta_url:          contentRow.cta_url,\n      arabic_required:  contentRow.arabic_required,\n      hook:             parsed.hook,\n      alt_text:         parsed.alt_text,\n    }\n  }];\n\n} catch (error) {\n  const dayNum = $('Loop Over Items').item.json.day_number;\n  throw new Error(`Phase 3A — Copy parse failed for Day ${dayNum}: ${error.message}`);\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2416,
+        -112
+      ],
+      "id": "1354b589-a765-4d84-ad26-bb28cfff6321",
+      "name": "Code: Parse Copy Response"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash-image",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash-image (Nano Banana)"
+        },
+        "prompt": "={{ $('AI: Expand Image Prompt').item.json.candidates[0].content.parts[0].text }}\n",
+        "options": {
+          "sampleCount": 1,
+          "binaryPropertyOutput": "data"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        4672,
+        32
+      ],
+      "id": "898ffa42-03a6-450e-8dd6-4a29551c0eb7",
+      "name": "AI: Generate Post Image",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "LMokzqlptXWbawE6",
+          "name": "content management api"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "name": "=day_{{ $('Code: Parse Copy Response').item.json.day_number }}_image.jpg",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('DB: Get Client Details').item.json.drive_folder_id }}",
+          "mode": "id"
+        },
+        "options": {
+          "simplifyOutput": true
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        5168,
+        16
+      ],
+      "id": "6fbaec07-7e9d-4078-8e52-eaa4bbdcde73",
+      "name": "Drive: Upload Image to Client Folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "sbINNLBW9tFyLYX1",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const incoming = $input.first().json;\nconst copyData = $('Code: Parse Copy Response').item.json;\nlet imageUrl = null, slideImages = {};\n\nif (copyData.format === 'carousel') {\n  for (let i = 1; i <= 7; i++) slideImages[`slide_${i}_image_url`] = incoming[`slide_${i}_image_url`] ?? null;\n  imageUrl = slideImages.slide_1_image_url;            // cover image\n} else {\n  const id = incoming.id ?? null;                       // Drive single-image result\n  imageUrl = id ? `https://drive.google.com/file/d/${id}/view` : null;\n}\nreturn [{ json: { ...copyData, ...slideImages, image_url: imageUrl,\n  all_slide_image_urls: incoming.all_slide_image_urls ?? imageUrl ?? '',\n  image_model_used: 'gemini-2.5-flash-image' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5568,
+        -112
+      ],
+      "id": "d257fbe1-380d-43f0-b6fa-6ecc79178b12",
+      "name": "Code: Build Final Row Data"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Content_Calendar",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "post_copy",
+              "fieldValue": "={{ $json.post_copy }}"
+            },
+            {
+              "fieldId": "hashtags",
+              "fieldValue": "={{ $json.hashtags }}"
+            },
+            {
+              "fieldId": "carousel_content",
+              "fieldValue": "={{ $json.carousel_content }}"
+            },
+            {
+              "fieldId": "image_url",
+              "fieldValue": "={{ $json.image_url }}"
+            },
+            {
+              "fieldId": "image_model_used",
+              "fieldValue": "={{ $json.image_model_used }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "Pending_Manager"
+            },
+            {
+              "fieldId": "author",
+              "fieldValue": "AI Agent"
+            },
+            {
+              "fieldId": "updated_at",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            },
+            {
+              "fieldId": "hook",
+              "fieldValue": "={{ $json.hook }}"
+            },
+            {
+              "fieldId": "image_prompt_expanded",
+              "fieldValue": "={{ $json.format === 'carousel' ? '' : $('AI: Expand Image Prompt').item.json.candidates[0].content.parts[0].text }}"
+            },
+            {
+              "fieldId": "alt_text",
+              "fieldValue": "={{ $json.alt_text }}"
+            },
+            {
+              "fieldId": "slide_images",
+              "fieldValue": "={{ { slide_1: $json.slide_1_image_url, slide_2: $json.slide_2_image_url, slide_3: $json.slide_3_image_url, slide_4: $json.slide_4_image_url, slide_5: $json.slide_5_image_url, slide_6: $json.slide_6_image_url, slide_7: $json.slide_7_image_url } }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        5744,
+        -112
+      ],
+      "id": "08645272-e350-4d96-97b7-84410e06b8fe",
+      "name": "DB: Update Supabase Row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "completed_rows",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1840,
+        128
+      ],
+      "id": "91d32341-912e-4346-84e9-5fb8e43aa277",
+      "name": "Aggregate: Collect All Completed Rows"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Authorized_Users",
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "role",
+              "condition": "eq",
+              "keyValue": "Admin"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2128,
+        128
+      ],
+      "id": "d44c0c16-26b6-4c4e-b68d-069bf4634f01",
+      "name": "DB: Get Admin User",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Clients",
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('DB: Get All Plan_Approved Rows').first().json.client_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2416,
+        128
+      ],
+      "id": "9edea39b-831a-406b-8d62-f25b281229c5",
+      "name": "DB: Get Client Sheet Info",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('DB: Get Admin User').first().json.telegram_id }}",
+        "text": "=🎨 *Content Assets Ready for Review*\n\n✅ All posts have been generated and saved.\n\n📊 Open your Google Sheet to review:\nhttps://docs.google.com/spreadsheets/d/{{ $('DB: Get Client Sheet Info').first().json.sheets_id }}/edit\n\nFor each row:\n✏️ Edit post copy if needed\n🖼️ Click Output Assets to preview the image\n✅ Set Status to *Manager_Approved* when ready\n\nThe system checks for approvals every 15 minutes.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2640,
+        128
+      ],
+      "id": "3518b6f9-c5ff-4e2d-9b8d-5bbb82626f8b",
+      "name": "Telegram: Notify Admin — Content Ready for Review",
+      "webhookId": "phase3a-notify-v2-001",
+      "credentials": {
+        "telegramApi": {
+          "id": "Gg4nrOPfTddNGNV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 1 * * 1"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        1168,
+        128
+      ],
+      "id": "bac796a2-0d73-40e3-b219-80de3774820f",
+      "name": "Weekly Monday Trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b01f953f-5888-4ed3-bdda-ee5c480dbe31",
+              "leftValue": "={{ $json.format }}",
+              "rightValue": "carousel",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2640,
+        -112
+      ],
+      "id": "c207dc27-8603-4a92-958e-45d91b4f63aa",
+      "name": "IF: format === 'carousel'?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst slides = data.carousel_content;\n\nif (!slides || typeof slides !== 'object') {\n  return [{ json: { ...data, current_slide_key: 'slide_1',\n    current_slide_headline: '', current_slide_subtitle: '',\n    current_slide_body: '', slide_index: 1 } }];\n}\n\nreturn Object.entries(slides).map(([key, slide], i) => ({\n  json: {\n    ...data,\n    current_slide_key: key,\n    current_slide_headline: typeof slide === 'object' ? slide.headline : slide,\n    current_slide_subtitle: typeof slide === 'object' ? slide.subtitle : '',\n    current_slide_body: typeof slide === 'object' ? slide.body : slide,\n    slide_index: i + 1,\n    image_prompt: `${data.image_prompt} — Slide ${i + 1}: ${typeof slide === 'object' ? slide.headline : slide}`\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2864,
+        -208
+      ],
+      "id": "0b1fdf8f-0b22-4935-9470-968269cf641a",
+      "name": "Code: Split Slides"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a social media designer creating a FINAL branded post image — fully composited and ready to publish. No separate text overlay will be added later. All text and layout described below must be rendered directly inside the generated image.\n\nLAYOUT (follow exactly):\n- LEFT 45% of the canvas: clean white background panel, softly blending into the photo on the right edge (no hard line).\n- TOP-LEFT CORNER of the white panel: a clean rectangular placeholder zone, roughly 15% width × 8% height of the full image — a subtle light neutral or off-white rectangle with softly rounded edges, slightly separated from the background. Leave this zone EMPTY — no text, no symbols, no shapes inside it. A real brand logo will be placed here in post-processing.\n- Below the placeholder (with comfortable spacing): the HEADLINE in large bold dark navy sans-serif font, left-aligned, line-broken naturally over 2–3 lines. The headline is the first 6 words of the copy below:\n  \"{{ $('Code: Parse Copy Response').item.json.post_copy.split(' ').slice(0,6).join(' ') }}\"\n- Below the headline: the BODY TEXT in smaller regular dark gray sans-serif font, left-aligned, comfortable line spacing:\n  \"{{ $('Code: Parse Copy Response').item.json.post_copy }}\"\n- RIGHT 55% of the canvas: photorealistic brand photography, soft natural light, blending gently into the white panel at the seam.\n\nPHOTO SUBJECT (right side only):\nBrief: {{ $('Code: Parse Copy Response').item.json.image_prompt }}\nTopic: {{ $('Code: Parse Copy Response').item.json.core_topic }}\nBrand visual style: {{ $('DB: Get Client Details').item.json.brand_guidelines.visual_style }}\nVisual feel: {{ $('DB: Get Client Details').item.json.brand_guidelines.visual_feel }}\nBrand color palette: {{ $('DB: Get Client Details').item.json.brand_guidelines.brand_colors }}\nProducts (depict accurately if relevant): {{ $('DB: Get Client Details').item.json.product_catalog }}\n\nHARD CONSTRAINTS:\n{{ $('DB: Get Client Details').item.json.brand_guidelines.visual_restrictions }}\n- No watermarks, no AI-generated logos or signatures, no random text fragments anywhere on the image\n- All rendered text must be clean, perfectly spelled, and fully legible — use a clear modern sans-serif typeface\n- The top-left logo placeholder zone MUST remain empty\n- Headline and body text MUST appear exactly as written above, with no paraphrasing or omissions\n- Luxury, warm, editorial feel — soft natural light, warm neutral tones\n- Aspect ratio: {{ ({Instagram:'1:1',LinkedIn:'1.91:1',Facebook:'1.91:1',Pinterest:'2:3'})[$('Code: Parse Copy Response').item.json.target_platform] || '1:1' }}\n\nOutput ONLY the final image generation prompt, no labels or commentary."
+            }
+          ]
+        },
+        "simplify": false,
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        3920,
+        48
+      ],
+      "id": "a2ab7bf1-4000-432e-aec5-6393a5f79c7c",
+      "name": "AI: Expand Image Prompt",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "LMokzqlptXWbawE6",
+          "name": "content management api"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a social media designer creating a FINAL carousel slide image — fully composited and ready to publish.\n\nSLIDE LAYOUT (follow exactly):\n- LEFT 50% of the canvas: clean white or near-white background panel, softly blending into the photo on the right edge (no hard line). The white panel must be completely clean — no boxes, no shapes, no rectangles, no placeholder zones anywhere.\n- TOP-LEFT of the white panel: the SLIDE NUMBER \"{{ $json.slide_index < 10 ? '0' + $json.slide_index : $json.slide_index }}\" in small bold dark navy sans-serif text, with a short gold/tan horizontal line immediately beneath it (about 5% of canvas width, 2–3 pixels thick).\n- Below the slide number and gold line (with comfortable spacing): the HEADLINE in large bold dark navy sans-serif font, left-aligned, line-broken naturally over 2–3 lines:\n  \"{{ $json.current_slide_headline }}\"\n- Below the headline (with comfortable spacing): the SUBTITLE in small regular dark gray sans-serif font, left-aligned, line-broken naturally, max 2 lines:\n  \"{{ $json.current_slide_subtitle }}\"\n- Below the subtitle: pure empty white space — nothing else. No additional text, no captions, no decorative elements.\n- RIGHT 50–60% of the canvas: photorealistic interior/product photography, soft natural light, blending gently into the white panel at the seam.\n\nPHOTO SUBJECT (right side only):\nBrief: {{ $json.image_prompt }}\nTopic: {{ $json.core_topic }}\nBrand visual style: {{ $('DB: Get Client Details').item.json.brand_guidelines.visual_style }}\nVisual feel: {{ $('DB: Get Client Details').item.json.brand_guidelines.visual_feel }}\nBrand color palette: {{ $('DB: Get Client Details').item.json.brand_guidelines.brand_colors }}\nProducts (depict accurately if relevant): {{ $('DB: Get Client Details').item.json.product_catalog }}\n\nHARD CONSTRAINTS:\n{{ $('DB: Get Client Details').item.json.brand_guidelines.visual_restrictions }}\n- No watermarks, no AI-generated logos, no random text fragments anywhere\n- Brand color codes are for your reference only — NEVER render hex codes, color values, or any technical data as visible text on the image\n- The slide number appears EXACTLY ONCE at the top-left — never repeated anywhere else on the image\n- The right side photo must contain NO logos, NO text, NO watermarks of any kind\n- The white panel must be COMPLETELY CLEAN — no boxes, no rounded rectangles, no placeholder shapes of any kind\n- Only the slide number, gold line, headline, and subtitle appear — nothing else on the white panel\n- Headline and subtitle must be perfectly spelled and fully legible — clean modern sans-serif\n- Subtitle must appear EXACTLY as written above — no paraphrasing, no omissions\n- Soft natural light, luxury feel, warm neutral tones\n- Aspect ratio: {{ ({Instagram:'4:5',LinkedIn:'4:5',Facebook:'4:5',Pinterest:'2:3'})[$json.target_platform] || '4:5' }}\n\nOutput ONLY the final image generation prompt text, no labels or commentary."
+            }
+          ]
+        },
+        "simplify": false,
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        3088,
+        -208
+      ],
+      "id": "4dfcaa8e-ca5b-4628-9373-7c7505ff2f7f",
+      "name": "AI: Expand Image Prompt Slide",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "LMokzqlptXWbawE6",
+          "name": "content management api"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash-image",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash-image (Nano Banana)"
+        },
+        "prompt": "={{ $('AI: Expand Image Prompt Slide').item.json.candidates[0].content.parts[0].text }}\n",
+        "options": {
+          "sampleCount": 1,
+          "binaryPropertyOutput": "data"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        3440,
+        -208
+      ],
+      "id": "4c938ac9-4515-49b9-a265-5cd6de29c11d",
+      "name": "AI: Generate Post Image For Slide",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "LMokzqlptXWbawE6",
+          "name": "content management api"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const aggregated = $input.first().json.slides; // matches destinationFieldName above\nconst base = aggregated[0];\n\nconst slideImages = {};\nfor (const row of aggregated) {\n  slideImages[`${row.current_slide_key}_image_url`] = row.image_url;\n}\n\nreturn [{\n  json: {\n    ...base,\n    ...slideImages,\n    all_slide_image_urls: Object.values(slideImages).filter(Boolean).join('\\n')\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5120,
+        -208
+      ],
+      "id": "38e1f0b6-aa8e-4b80-acb5-e0e535ae1d71",
+      "name": "Code: Collect Slide URLs"
+    },
+    {
+      "parameters": {
+        "name": "=day_{{ $('Code: Parse Copy Response').item.json.day_number }}_{{ $('Code: Split Slides').item.json.current_slide_key }}.jpg",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('DB: Get Client Details').item.json.drive_folder_id }}",
+          "mode": "id"
+        },
+        "options": {
+          "simplifyOutput": true
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        4496,
+        -208
+      ],
+      "id": "cd10389a-fbc4-451f-9e86-b0289b45e963",
+      "name": "Drive: Upload Image to Client Folder for Slide",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "sbINNLBW9tFyLYX1",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const j = $input.first().json;\nconst id = j.id ?? null;\n\nreturn [{\n  json: {\n    ...j,\n    current_slide_key: j.current_slide_key ?? null,\n    image_url: id ? `https://drive.google.com/file/d/${id}/view` : null\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4672,
+        -208
+      ],
+      "id": "4f09c469-3c82-43d6-85be-a5c2f4a09c9f",
+      "name": "Code: id→url"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "slides",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        4896,
+        -208
+      ],
+      "id": "113ac442-f724-439e-b150-c837a8a4a8d1",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "32eed049-2815-4a3b-b2ce-a921179b5982",
+              "leftValue": "={{ $('Code: Split Slides').item.json.slide_index }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3664,
+        -208
+      ],
+      "id": "bfe01ac7-aaf2-480b-a3bc-933365585e9a",
+      "name": "IF: Is Slide 1?"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Code: Parse Copy Response').item.json.logo_url + '&confirm=t' }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "logo"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4880,
+        32
+      ],
+      "id": "dc9fb00f-8f63-4129-8ad2-86250c35f98c",
+      "name": "HTTP: Download Logo"
+    },
+    {
+      "parameters": {
+        "operation": "composite",
+        "dataPropertyNameComposite": "logo",
+        "positionX": 40,
+        "positionY": 25,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.editImage",
+      "typeVersion": 1,
+      "position": [
+        4992,
+        256
+      ],
+      "id": "1ff79ac9-c1c4-413e-8749-789dad6a220e",
+      "name": "Image: Composite Logo"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Code: Parse Copy Response').item.json.logo_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "logo"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3856,
+        -416
+      ],
+      "id": "e468166f-6404-42e6-b943-9b3e8c654e19",
+      "name": "HTTP: Download Logo (slide)"
+    },
+    {
+      "parameters": {
+        "operation": "composite",
+        "dataPropertyNameComposite": "logo",
+        "positionX": 40,
+        "positionY": 25,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.editImage",
+      "typeVersion": 1,
+      "position": [
+        4256,
+        -416
+      ],
+      "id": "64ad0b03-4e1c-4b05-a90b-cd390e9b41c2",
+      "name": "Image: Composite Logo (slide)"
+    },
+    {
+      "parameters": {
+        "operation": "resize",
+        "dataPropertyName": "logo",
+        "width": 180,
+        "height": 90,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.editImage",
+      "typeVersion": 1,
+      "position": [
+        4064,
+        -416
+      ],
+      "id": "0628dc02-ec7c-4224-8887-8e1538217f79",
+      "name": "Resize the Logo (slide)"
+    },
+    {
+      "parameters": {
+        "operation": "resize",
+        "dataPropertyName": "logo",
+        "width": 180,
+        "height": 90,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.editImage",
+      "typeVersion": 1,
+      "position": [
+        4784,
+        288
+      ],
+      "id": "c167ae5d-9c23-4c08-b63e-df596b5ed6b1",
+      "name": "Resize the Logo"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        4304,
+        -208
+      ],
+      "id": "05062fac-4783-46fd-90bb-75a96efc9d31",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Code: Build Final Row Data').item.json.sheets_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Content Calendar",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": 0,
+            "Day Number": "={{ $json.day_number }}",
+            "Status": "Pending_Manager",
+            "Post Copy": "={{ $json.post_copy }}",
+            "Hashtags": "={{ $json.hashtags }}",
+            "Output Assets": "={{ $json.slide_1_image_url ?? 'Image generation failed' }}",
+            "Done By": "AI Agent",
+            "Slide 1": "={{ $json.carousel_content?.slide_1?.body ?? '' }}",
+            "Slide 2": "={{ $json.carousel_content?.slide_2?.body ?? '' }}",
+            "Slide 4": "={{ $json.carousel_content?.slide_4?.body ?? '' }}",
+            "Slide 3": "={{ $json.carousel_content?.slide_3?.body ?? '' }}",
+            "Slide 5": "={{ $json.carousel_content?.slide_5?.body ?? '' }}",
+            "Slide 7": "={{ $json.carousel_content?.slide_7?.body ?? '' }}",
+            "Slide 6": "={{ $json.carousel_content?.slide_6?.body ?? '' }}",
+            "Slide 1 Image": "={{ $json.slide_1_image_url ?? '' }}",
+            "Slide 2 Image": "={{ $json.slide_2_image_url ?? '' }}",
+            "Slide 3 Image": "={{ $json.slide_3_image_url ?? '' }}",
+            "Slide 4 Image": "={{ $json.slide_4_image_url ?? '' }}",
+            "Slide 5 Image": "={{ $json.slide_5_image_url ?? '' }}",
+            "Slide 6 Image": "={{ $json.slide_6_image_url ?? '' }}",
+            "Slide 7 Image": "={{ $json.slide_7_image_url ?? '' }}"
+          },
+          "matchingColumns": [
+            "Day Number"
+          ],
+          "schema": [
+            {
+              "id": "Day Number",
+              "displayName": "Day Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Format",
+              "displayName": "Format",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Core Topic",
+              "displayName": "Core Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Image Description",
+              "displayName": "Image Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Keywords",
+              "displayName": "Keywords",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "CTA",
+              "displayName": "CTA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Posting Date",
+              "displayName": "Posting Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 1",
+              "displayName": "Slide 1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 2",
+              "displayName": "Slide 2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 3",
+              "displayName": "Slide 3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 4",
+              "displayName": "Slide 4",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 5",
+              "displayName": "Slide 5",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 6",
+              "displayName": "Slide 6",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 7",
+              "displayName": "Slide 7",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Done By",
+              "displayName": "Done By",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Post Copy",
+              "displayName": "Post Copy",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Hashtags",
+              "displayName": "Hashtags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Slide 1 Image",
+              "displayName": "Slide 1 Image",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 2 Image",
+              "displayName": "Slide 2 Image",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 3 Image",
+              "displayName": "Slide 3 Image",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 4 Image",
+              "displayName": "Slide 4 Image",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 5 Image",
+              "displayName": "Slide 5 Image",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 6 Image",
+              "displayName": "Slide 6 Image",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 7 Image",
+              "displayName": "Slide 7 Image",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Output Assets",
+              "displayName": "Output Assets",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Comment",
+              "displayName": "Comment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Live Links",
+              "displayName": "Live Links",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Target Platform",
+              "displayName": "Target Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "strategic_angle",
+              "displayName": "strategic_angle",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "keyword_to_use",
+              "displayName": "keyword_to_use",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "cta_url",
+              "displayName": "cta_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "arabic_required",
+              "displayName": "arabic_required",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        5760,
+        160
+      ],
+      "id": "7d065ba7-f93c-437a-be0b-7806b3234a3f",
+      "name": "Sheets: Update Content Calendar Row2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "cxrImtgrJYgfX5Xt",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        5392,
+        -112
+      ],
+      "id": "465204f8-f768-4a07-b94a-5640c808363b",
+      "name": "Merge1"
+    }
+  ],
+  "pinData": {
+    "Weekly Monday Trigger": [
+      {
+        "json": {
+          "timestamp": "2026-05-31T14:20:05.488+04:00",
+          "Readable date": "May 31st 2026, 2:20:05 pm",
+          "Readable time": "2:20:05 pm",
+          "Day of week": "Sunday",
+          "Year": "2026",
+          "Month": "May",
+          "Day of month": "31",
+          "Hour": "14",
+          "Minute": "20",
+          "Second": "05",
+          "Timezone": "Asia/Dubai (UTC+04:00)"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "DB: Get All Plan_Approved Rows": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Aggregate: Collect All Completed Rows",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "DB: Get Client Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Get Client Details": {
+      "main": [
+        [
+          {
+            "node": "AI: Generate Post Copy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI: Generate Post Copy": {
+      "main": [
+        [
+          {
+            "node": "Code: Parse Copy Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Parse Copy Response": {
+      "main": [
+        [
+          {
+            "node": "IF: format === 'carousel'?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI: Generate Post Image": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Download Logo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Drive: Upload Image to Client Folder": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code: Build Final Row Data": {
+      "main": [
+        [
+          {
+            "node": "DB: Update Supabase Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Update Supabase Row": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Update Content Calendar Row2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate: Collect All Completed Rows": {
+      "main": [
+        [
+          {
+            "node": "DB: Get Admin User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Get Admin User": {
+      "main": [
+        [
+          {
+            "node": "DB: Get Client Sheet Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Get Client Sheet Info": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Notify Admin — Content Ready for Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weekly Monday Trigger": {
+      "main": [
+        [
+          {
+            "node": "DB: Get All Plan_Approved Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: format === 'carousel'?": {
+      "main": [
+        [
+          {
+            "node": "Code: Split Slides",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI: Expand Image Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Split Slides": {
+      "main": [
+        [
+          {
+            "node": "AI: Expand Image Prompt Slide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI: Expand Image Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI: Generate Post Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI: Expand Image Prompt Slide": {
+      "main": [
+        [
+          {
+            "node": "AI: Generate Post Image For Slide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI: Generate Post Image For Slide": {
+      "main": [
+        [
+          {
+            "node": "IF: Is Slide 1?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Code: Collect Slide URLs": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drive: Upload Image to Client Folder for Slide": {
+      "main": [
+        [
+          {
+            "node": "Code: id→url",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: id→url": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Code: Collect Slide URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Is Slide 1?": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Download Logo (slide)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HTTP: Download Logo": {
+      "main": [
+        [
+          {
+            "node": "Resize the Logo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image: Composite Logo": {
+      "main": [
+        [
+          {
+            "node": "Drive: Upload Image to Client Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Download Logo (slide)": {
+      "main": [
+        [
+          {
+            "node": "Resize the Logo (slide)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image: Composite Logo (slide)": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resize the Logo (slide)": {
+      "main": [
+        [
+          {
+            "node": "Image: Composite Logo (slide)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resize the Logo": {
+      "main": [
+        [
+          {
+            "node": "Image: Composite Logo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Drive: Upload Image to Client Folder for Slide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Update Content Calendar Row2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Code: Build Final Row Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "7jEEPMkztYPBYvcM",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "f2e1deee-7db2-4dbd-8c7f-f71ef92cfe09",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "27691624a7c7d2a9124a20717f3db6f18f26825f3de4bc41f1be750963b9ae26"
+  },
+  "id": "FgKNT2I5jeUkqSYQ",
+  "tags": []
+}

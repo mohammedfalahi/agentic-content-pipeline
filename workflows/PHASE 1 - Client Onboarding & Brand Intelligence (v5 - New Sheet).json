@@ -1,0 +1,1548 @@
+{
+  "name": "PHASE 1 - Client Onboarding & Brand Intelligence (v5 - New Sheet)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🎯 PHASE 1 — CLIENT ONBOARDING & BRAND INTELLIGENCE (v4)\n\n### 📌 OVERVIEW\nForm-driven onboarding pipeline. Triggered automatically when a client submits the Google Form. Combines THREE intelligence sources:\n\n**Source 1:** Client form data (authoritative)\n**Source 2:** Live scraped website content (supplementary)\n**Source 3:** Client-uploaded brand guidelines PDF (authoritative)\n\nAll three are fed to Gemini for the most accurate brand intelligence extraction. Non-blocking — pipeline survives scrape failures or missing PDFs.\n\n---\n\n### 🗺️ FLOW STAGES\n\n**Stage 1 — Intake**\nGoogle Sheets Trigger → Map Form Data\n\n**Stage 2 — Enrichment**\nFirecrawl scrape (Source 2) → Brand guidelines PDF extraction (Source 3)\n\n**Stage 3 — Intelligence Extraction**\nGemini synthesizes all three sources into structured JSON\n\n**Stage 4 — Persistence**\nSupabase Clients table → Google Drive folder → Google Sheet for content calendar\n\n**Stage 5 — Handoff**\nWrite UID + Drive link back to form sheet → Notify admin via Telegram → Trigger Phase 2",
+        "height": 1212,
+        "width": 4224,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1136,
+        -1392
+      ],
+      "id": "dadfd249-0c34-4b23-92a1-57c18725d703",
+      "name": "Sticky: Workflow Overview"
+    },
+    {
+      "parameters": {
+        "content": "### 🧠 STAGE 3 — INTELLIGENCE EXTRACTION\n\nGemini receives all three sources and returns a strict JSON object containing:\n- client_name\n- brand_guidelines (tone, values, colors, slogans, platforms, etc.)\n- target_audience (demographics, segments, pain points)\n- keyword_collections (SEO, AEO, AIEO)\n\nZero temperature for deterministic output.",
+        "height": 352,
+        "width": 480,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        400,
+        -416
+      ],
+      "id": "5bd60cdd-19a2-4cb7-b79f-520d5df0d1eb",
+      "name": "Sticky: Stage 3 Intelligence"
+    },
+    {
+      "parameters": {
+        "content": "### 🟢 STAGE 1 — INTAKE\n\nGoogle Sheets Trigger watches the form responses sheet and fires when a new row is added.\n\n**IMPORTANT:** The Apps Script generates the UID *before* the row reaches n8n, so the trigger always sees a populated UID column.\n\nMap Form Data normalizes every column into clean variable names for downstream use.",
+        "height": 472,
+        "width": 612,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1072,
+        -240
+      ],
+      "id": "fcdc19bb-ded2-41ef-b484-af21d50a0acc",
+      "name": "Sticky: Stage 1 Intake"
+    },
+    {
+      "parameters": {
+        "content": "### 🌐 STAGE 2 — ENRICHMENT\n\n**Source 2:** Firecrawl scrapes the website. Continue-on-Fail is ON so a blocked scrape never stops the pipeline. URL normalizer prepends https:// if missing.\n\n**Source 3:** Parses brand guideline + banner + competitor references from the form. If a Drive PDF is uploaded, downloads and extracts the text. If none, passes an empty string.\n\nBoth sources merge into a single payload that flows to Gemini.",
+        "height": 504,
+        "width": 1812,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        208,
+        -80
+      ],
+      "id": "a51a1e52-bcf7-4461-9135-c9eeff461a90",
+      "name": "Sticky: Stage 2 Enrichment"
+    },
+    {
+      "parameters": {
+        "content": "### 🚀 STAGE 5 — HANDOFF\n\nWrites Drive folder link + Status back to the form sheet (matched by UID, not Timestamp). Fetches the Admin user from Supabase to notify them via Telegram. Triggers Phase 2 content planning automatically with both UUID and human UID passed through.",
+        "height": 376,
+        "width": 1056,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2464,
+        0
+      ],
+      "id": "ac88d44a-e8d6-4a0d-9c04-e1ad089305be",
+      "name": "Sticky: Stage 5 Handoff"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 10,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1jAIKo4NNX-cjvOoWBRt8Ke435KPOW7q3dKwOr3Lak6Y",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1854393183,
+          "mode": "list",
+          "cachedResultName": "Form Responses 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1jAIKo4NNX-cjvOoWBRt8Ke435KPOW7q3dKwOr3Lak6Y/edit#gid=1854393183"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1008,
+        80
+      ],
+      "id": "fe02a932-201c-43c2-86e7-f0a5ef20468c",
+      "name": "Trigger: Form Submission",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "cqg90m5kLfsbiIlb",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f0",
+              "name": "client_uid",
+              "value": "={{ $json['UID'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f1",
+              "name": "client_name",
+              "value": "={{ $json['Company Legal Name'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f2",
+              "name": "website_url_raw",
+              "value": "={{ $json['Website URL'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f2b",
+              "name": "website_url",
+              "value": "={{ ($json['Website URL'] || '').toString().trim().startsWith('http') ? $json['Website URL'].toString().trim() : 'https://' + ($json['Website URL'] || '').toString().trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "f3",
+              "name": "contact_person",
+              "value": "={{ $json['Contact Person Name'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f4",
+              "name": "industry",
+              "value": "={{ $json['Primary Industry/Niche'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f5",
+              "name": "company_description",
+              "value": "={{ $json[\"Brief Description of your Company's Products/Services\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "f6",
+              "name": "target_audience_raw",
+              "value": "={{ $json['Primary Target Audience Description (Demographics, Pain Points, etc.)'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f7",
+              "name": "b2b_type",
+              "value": "={{ $json['If your customer are B2B how do you define yourself?'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f8",
+              "name": "brand_voice",
+              "value": "={{ $json['What is your primary Brand Voice/Tone?'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f9",
+              "name": "platforms",
+              "value": "={{ $json['Which social platforms are most critical for your current marketing goals?'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f10",
+              "name": "cta_text",
+              "value": "={{ $json['What is the desired Call-to-Action (CTA) for most of our marketing campaigns?'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f11",
+              "name": "whatsapp",
+              "value": "={{ $json['WhatsApp number'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f12",
+              "name": "brand_colors",
+              "value": "={{ $json[\"What are your company's core Brand Colors? (e.g., provide HEX codes)\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "f13",
+              "name": "visual_restrictions",
+              "value": "={{ $json['Are there any specific visual elements (fonts, icons, design patterns) that MUST be used or strictly avoided in marketing collateral?'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f14",
+              "name": "visual_feel",
+              "value": "={{ $json['Poster/Banner Design Preferences: What feel should the visuals convey?'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f15a",
+              "name": "cta_link_primary",
+              "value": "={{ $json['Primary CTA Link (Website)'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f15b",
+              "name": "cta_link_secondary",
+              "value": "={{ $json['Secondary CTA Link (Meta/LinkedIn/Social)'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f15c",
+              "name": "cta_link_tertiary",
+              "value": "={{ $json['Tertiary CTA Link (WhatsApp/Other)'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f16",
+              "name": "arabic_content",
+              "value": "={{ $json['Do you wish to have Arabic content?'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f17",
+              "name": "content_types",
+              "value": "={{ $json['what are the type of the content needed?'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f18",
+              "name": "plan_selected",
+              "value": "={{ $json['Choose Plan that suits you best'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f19",
+              "name": "submission_timestamp",
+              "value": "={{ $json['Timestamp'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f20",
+              "name": "brand_guidelines_refs",
+              "value": "={{ $json['Upload Brand Guidelines Document (PDF/DOCX - if applicable)'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f21",
+              "name": "banner_guidelines_refs",
+              "value": "={{ $json['Upload digital posters/banners Guidelines Document (PDF/DOCX - if applicable)'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f22",
+              "name": "competitor_refs",
+              "value": "={{ $json['Competitor or Reference Websites'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f23",
+              "name": "logo_ref",
+              "value": "={{ $json['Upload Company Logo (High Resolution - PNG/Vector preferred)'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f24",
+              "name": "email",
+              "value": "={{ $json['Email Address'] }}",
+              "type": "string"
+            },
+            {
+              "id": "98bb8905-3452-40c2-b1c7-c244bcda4567",
+              "name": "banner_size_requirements",
+              "value": "={{ $json['Apart from standard requirements Do you have specific size or resolution requirements for digital posters/banners  ? (e.g., Instagram Story, Facebook Ad, LinkedIn Banner)'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -672,
+        80
+      ],
+      "id": "ac997881-c5cd-4913-869f-f6cd2adc513f",
+      "name": "Map Form Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Gather all reference fields that may contain Drive PDF URLs\nconst fields = [\n  $('Map Form Data').item.json.brand_guidelines_refs || '',\n  $('Map Form Data').item.json.banner_guidelines_refs || '',\n  $('Map Form Data').item.json.competitor_refs || ''\n];\n\nconst combined = fields.join(' ; ');\nconst tokens = combined.split(/[;,\\s\\n]+/).filter(t => t.trim().length > 0);\n\nconst references = [];\nfor (const token of tokens) {\n  const url = token.trim();\n  if (!url.startsWith('http')) continue;\n\n  // Only download Drive files (PDFs/DOCX). Non-Drive URLs (competitor sites) are noted but not downloaded.\n  if (url.includes('drive.google.com')) {\n    const match = url.match(/[-\\w]{25,}/);\n    const file_id = match ? match[0] : null;\n    if (!file_id) continue;\n    references.push({ json: { url, type: 'drive_file', file_id } });\n  }\n}\n\n// Always return at least one item so flow never stops\nif (references.length === 0) {\n  return [{ json: { url: '', type: 'none', file_id: null } }];\n}\n\nreturn references;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        768,
+        176
+      ],
+      "id": "7fb19c4e-6afc-4391-9dff-898681e3f4e4",
+      "name": "Parse Brand References"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.type }}",
+                    "rightValue": "drive_file",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "switch-cond-1"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Drive File"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        992,
+        176
+      ],
+      "id": "990d067d-b71a-4984-8001-4e548f3ae0fb",
+      "name": "Route by Reference Type"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.file_id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1216,
+        80
+      ],
+      "id": "abbf9623-86c2-4ce0-8420-50511affaa77",
+      "name": "Download Brand Guidelines PDF",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "sbINNLBW9tFyLYX1",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bg1",
+              "name": "brand_guidelines_content",
+              "value": "={{ $json.candidates[0].content.parts[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1664,
+        80
+      ],
+      "id": "be7a5b7b-52c7-4e4c-a3e0-97effeb1e397",
+      "name": "Format Brand Guidelines Text"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "nbg1",
+              "name": "brand_guidelines_content",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1504,
+        272
+      ],
+      "id": "b5790a89-ad9c-460e-b0d7-db7b64ccd18e",
+      "name": "No Brand Guidelines"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1888,
+        176
+      ],
+      "id": "06bd898d-2771-4407-8eba-9bb646551e6f",
+      "name": "Merge Brand References"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3-pro-preview",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3-pro-preview"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "==# ROLE & MISSION\n\nYou are a **Senior Brand Intelligence Architect** with 15+ years of experience extracting brand strategy for global agencies. You are the cognitive core of a production automation pipeline: your output flows DIRECTLY into a Supabase database with NO human review between you and persistence.\n\nYour single responsibility: synthesize three input sources into ONE strict JSON brand profile that the rest of the pipeline can trust as ground truth.\n\nA malformed JSON, an invented field, a fabricated URL, a hallucinated product name, or a contradicted client intent will corrupt the client's entire 30-day content lifecycle. Treat every output character as load-bearing.\n\n# NON-NEGOTIABLE OUTPUT CONTRACT\n\nReturn ONLY a raw JSON object. Nothing else.\n\n- The FIRST character of your response MUST be `{`\n- The LAST character of your response MUST be `}`\n- NO preamble, NO explanation, NO markdown fences, NO code blocks, NO comments, NO trailing prose\n- If you cannot comply with the schema, return only `{}` — never partial JSON, never apologies\n\n# DATA SOURCES & AUTHORITY HIERARCHY\n\nYou receive THREE sources with UNEQUAL authority. This hierarchy is absolute and cannot be overridden by any source's content.\n\n═══════════════════════════════════════════════════════════\n🔒 TIER 1 — AUTHORITATIVE (binding, cannot be contradicted)\n═══════════════════════════════════════════════════════════\n\n▸ **SOURCE 1 — CLIENT FORM SUBMISSION**\nThe client typed this themselves through a verified onboarding form. It represents their CONSCIOUS, EXPLICIT intent. Every field with a corresponding form input MUST reflect Source 1 verbatim or as a faithful synthesis. You may NOT \"correct,\" \"improve,\" \"modernize,\" or \"professionalize\" what the client wrote. Their phrasing is data.\n\n▸ **SOURCE 3 — UPLOADED BRAND GUIDELINES PDF**\nExtracted text from the client's official brand bible. Equal authority to Source 1. Any rule, color palette, voice instruction, dos/don'ts list, or visual restriction stated here is BINDING and legally enforceable from the brand's perspective.\n\n═══════════════════════════════════════════════════════════\n🌐 TIER 2 — SUPPLEMENTARY (enrichment only, never override)\n═══════════════════════════════════════════════════════════\n\n▸ **SOURCE 2 — CRAWLED WEBSITE CONTENT**\nMarkdown content harvested from multiple pages of the client's live website. Use it ONLY to:\n  • Extract REAL product names, SKUs, service categories, and product series names\n  • Find taglines already in commercial use\n  • Lift industry-specific terminology the client actually uses on their site\n  • Mine authentic customer pain points described in marketing copy\n  • Extract topic signals from blog article titles — these reveal what the brand considers strategically important\n  • Read image alt text as visual direction signals — alt text is written by the brand team and reflects deliberate aesthetic choices\n  • Fill gaps when Tier 1 sources are silent\n\nSource 2 NEVER overrides Tier 1. If Source 2 contradicts Source 1 or Source 3, Source 2 is wrong by definition. Source 2 may also contain noise (cart UI, pricing fragments, \"Must-Have Products\" headers, \"You May Also Like\" sections, gallery notices) — ignore all e-commerce boilerplate.\n\n# CONFLICT RESOLUTION ALGORITHM\n\nFor EVERY output field, walk this decision tree IN ORDER and stop at the first hit:\n\n```\n1. Does SOURCE 1 directly answer this field?\n   ├─ YES → Use Source 1 value. STOP.\n   └─ NO  → Continue to step 2.\n\n2. Does SOURCE 3 (PDF) directly answer this field?\n   ├─ YES → Use Source 3 value. STOP.\n   └─ NO  → Continue to step 3.\n\n3. Can SOURCE 2 (crawl) supply this field with evidence?\n   ├─ YES → Use Source 2 value. STOP.\n   └─ NO  → Continue to step 4.\n\n4. Infer conservatively from industry + company description.\n   Stay generic if uncertain. NEVER invent specifics.\n```\n\n## SPECIAL CASES (override the default algorithm)\n\n- **\"Refer to guideline PDF\" pattern in Source 1** → treat that Source 1 field as empty, pull directly from Source 3.\n- **Source 2 empty / crawl failed** → build profile from Tier 1 only. DO NOT FABRICATE website content under any circumstance.\n- **Source 3 empty / no PDF uploaded** → build profile from Source 1 + Source 2 only. DO NOT FABRICATE PDF rules.\n- **All three sources empty for a field** → infer minimally from industry vertical and B2B type. Never invent product names, HEX codes, URLs, statistics, or claims.\n- **Source 1 contains a typo or unconventional phrasing** → preserve it. The client's voice is the brand's voice.\n\n# FIELD-BY-FIELD EXTRACTION RULES\n\n## `client_name` (string)\n→ EXACT byte-for-byte copy of \"Company Legal Name\" from Source 1. Preserve capitalization, spacing, punctuation, special characters. Do not expand abbreviations (\"FZE\" stays \"FZE\"). Do not \"fix\" perceived typos. Do not append \"LLC\" or \"Inc.\"\n\n## `brand_guidelines.tone` (string)\n→ One full sentence describing voice posture and emotional register.\n→ Priority chain: Source 3 PDF tone section → Source 1 Brand Voice field → conservative inference from industry.\n→ Example: \"Professional and informative, blending technical authority with approachable explanations for non-expert procurement decision-makers.\"\n\n## `brand_guidelines.values` (array — EXACTLY 5 items)\n→ Each item is a concise noun phrase, 1-3 words. Title Case.\n→ Priority: Source 3 explicit values → mine Source 1 company_description for implied values → enrich from Source 2 \"About\" pages.\n→ Avoid corporate clichés (\"Excellence\", \"Quality\") unless explicitly stated by the client. Prefer specific values like \"Customs Expertise\" over generic \"Reliability\".\n→ If Source 2 reveals specific product categories or technology verticals the brand operates in (e.g. solar, UPS, EV charging, portable power), reflect these in the values where relevant — \"Solar Innovation\" is stronger than generic \"Innovation\" for an energy brand.\n→ Example: [\"Reliability\", \"Sustainability\", \"Technical Excellence\", \"Customer Partnership\", \"Innovation\"]\n\n## `brand_guidelines.visual_style` (string)\n→ One descriptive sentence covering aesthetic direction.\n→ Synthesize Source 1 visual_feel + visual_restrictions WITH Source 3 design rules.\n→ If Source 2 contains image alt text descriptions, use them to infer the brand's visual direction — what subjects, environments, and moods the brand photographs. Alt text is written by the brand team and reflects deliberate visual choices.\n→ Reference real elements when available: colors, typography type, imagery style, layout principles.\n\n## `brand_guidelines.messaging` (string)\n→ One sentence summarizing the CORE message angle — what the brand most wants the audience to walk away believing after seeing any single piece of content.\n→ Must align with Source 1 company_description. Must be specific, not generic.\n→ If Source 2 contains named product series (e.g. Makellos, Stellar, Camper, Alloy, Pulsar, Lume — or whatever real series names appear), reference at least one to ground the messaging in real product reality rather than generic claims.\n→ Weak: \"We provide quality services.\"\n→ Strong: \"Gletscher Energy is the reliable, future-focused energy partner for organizations transitioning to sustainable infrastructure across MENA and Africa.\"\n\n## `brand_guidelines.brand_colors` (string)\n→ Exact HEX codes as a comma-separated string.\n→ Priority order: Source 3 PDF palette → Source 1 brand_colors field → Source 2 CSS observation.\n→ If Source 1 says \"Refer to guideline PDF\" → use Source 3 colors. If both silent → return empty string.\n→ **NEVER guess HEX codes. NEVER translate color names (\"orange\" is not a HEX code).**\n→ Format: `\"#BD7531, #1E2B47, #F4F0E2\"`\n\n## `brand_guidelines.visual_restrictions` (string)\n→ Combine Source 1 client-stated restrictions + Source 3 PDF dos/don'ts VERBATIM.\n→ NEVER soften, paraphrase, or summarize away constraints. Restrictions are legal/compliance/political signals — treat every word as load-bearing.\n→ If client wrote \"no pictures of real cities or buildings\" — that EXACT phrase must appear in this field.\n→ If client wrote \"must not mention anything that will get in trouble with governments\" — preserve it verbatim.\n\n## `brand_guidelines.visual_feel` (string)\n→ Short phrase, direct from Source 1 \"Poster/Banner Design Preferences\".\n→ Examples: \"Photo-heavy and Realistic\", \"Minimalist and Clean\", \"Bold and Vibrant\"\n\n## `brand_guidelines.arabic_content` (string)\n→ Direct copy from Source 1. ONLY these acceptable values: `\"Yes\"`, `\"No\"`, `\"Maybe\"`.\n→ If Source 1 contains a longer string (e.g., \"Yes | Extra 45AED per content\"), normalize to just `\"Yes\"`.\n→ If Source 1 contains anything outside this set, normalize to closest match. Default to `\"No\"` if completely unclear.\n\n## `brand_guidelines.slogans` (array — MINIMUM 2 items)\n→ Priority chain (do not skip steps):\n   1. Real taglines explicitly found in Source 3 PDF\n   2. Real taglines visible in Source 2 website content — look specifically at H1/H2 headings on the homepage, hero section subheadings, and footer taglines. Do NOT pick up product descriptions, blog titles, or section headers as slogans.\n   3. ONLY IF both above fail → generate 2 brand-aligned originals\n→ If you generate originals, they MUST reflect Source 1 brand_voice exactly. No generic clichés. No translation. Industry-specific.\n\n## `brand_guidelines.platforms` (string)\n→ Comma-separated string listing platforms the client EXPLICITLY selected in Source 1.\n→ Do NOT add platforms not selected (no inferring \"you should also be on TikTok\").\n→ Do NOT remove platforms selected.\n→ Preserve the order from Source 1 where possible.\n→ Format: `\"Facebook, Instagram, LinkedIn, Pinterest\"`\n\n## `brand_guidelines.cta_links` (object with 3 keys)\n→ Object structure: `{ \"primary\": \"...\", \"secondary\": \"...\", \"tertiary\": \"...\" }`\n→ Copy Source 1 cta_link_primary → primary key, VERBATIM\n→ Copy Source 1 cta_link_secondary → secondary key, VERBATIM\n→ Copy Source 1 cta_link_tertiary → tertiary key, VERBATIM\n→ If a CTA link is missing in Source 1, return empty string `\"\"` for that key.\n→ **NEVER fabricate URLs. NEVER auto-correct URLs (do not add \"https://\" if absent — preserve as-is).**\n\n## `target_audience.demographics` (string)\n→ One detailed sentence synthesizing Source 1 target_audience_raw.\n→ Must include: geography, business type, role/seniority, decision-maker context — but only where stated or strongly implied.\n→ Example: \"System integrators and distributors operating across the Middle East and Africa, primarily B2B procurement leads and technical decision-makers responsible for evaluating renewable energy infrastructure.\"\n\n## `target_audience.income_tier` (string)\n→ Single value or compound from this EXACT enumerated set:\n  `\"Entry\"` | `\"Mid-Market\"` | `\"Premium\"` | `\"Enterprise\"` | `\"Government/Institutional\"`\n→ Combinations allowed: `\"Mid-Market & Enterprise\"`, `\"Premium & Enterprise\"`, `\"Enterprise & Government/Institutional\"`.\n→ Infer from B2B type + industry + audience description. Do not invent new tier names.\n\n## `target_audience.b2b_type` (string)\n→ EXACT copy of Source 1 b2b_type field. Preserve casing.\n\n## `target_audience.interests` (array — EXACTLY 5 items)\n→ Professional interests, NOT consumer hobbies.\n→ Answer: what does this audience READ, ATTEND, FOLLOW, SUBSCRIBE TO, CARE ABOUT in their professional life?\n→ Examples for renewable energy B2B: [\"Solar Industry Trade Shows\", \"Energy Storage Innovations\", \"Government Sustainability Policy\", \"Grid Infrastructure News\", \"Smart Building Technology\"]\n\n## `target_audience.pain_points` (array — EXACTLY 5 items)\n→ Real, specific, named problems this audience faces in their work.\n→ Pull from Source 1 target_audience_raw if pain points are stated. Otherwise derive from industry + product positioning + Source 2 marketing copy.\n→ **Be specific. Generic pain points are a failure mode.**\n→ Weak: \"Slow processes\"\n→ Strong: \"Customs clearance delays causing demurrage charges at UAE ports\"\n→ Weak: \"Bad quality products\"\n→ Strong: \"Solar inverter failures during peak summer load in GCC climates\"\n\n## `target_audience.segments` (array — EXACTLY 5 items)\n→ Distinct, non-overlapping sub-audiences within the primary audience.\n→ Each segment must be specific along at least ONE axis: geography, vertical, role, company size, or buying stage.\n→ Avoid overlapping segments (don't list both \"UAE distributors\" and \"Middle East distributors\").\n→ Example: [\"GCC Solar Distributors\", \"African Off-Grid Project Developers\", \"Industrial UPS Integrators\", \"Government Tender Procurement Teams\", \"Commercial Real Estate Energy Buyers\"]\n\n## `keyword_collections.seo_keywords` (array — EXACTLY 10 items)\n→ Real search-engine queries a buyer would actually type into Google.\n→ Mix: 60% high-intent commercial (\"buy solar inverter UAE\", \"freight forwarder Jebel Ali\"), 40% informational (\"how to size solar battery storage\", \"customs clearance documents UAE\").\n→ MUST incorporate real product/service names and series names extracted from Source 2 when available.\n→ Also extract topic signals from blog article titles found in Source 2 — blog titles reveal what the brand considers strategically important and what their audience searches for.\n→ Industry-specific. NEVER generic (\"best company\", \"good service\", \"top provider\").\n→ Include geography where appropriate (UAE, Dubai, GCC, Middle East, Africa).\n\n## `keyword_collections.aeo_phrases` (array — EXACTLY 10 items)\n→ Answer Engine Optimization — full natural-language question sentences for voice search, Alexa, Siri, Google Assistant, AI answer engines.\n→ Each must be a COMPLETE grammatical question ending with `?`.\n→ Format patterns:\n  • \"What is the best [industry term] for [audience type] in [region]?\"\n  • \"How do I choose a [product category] for [use case]?\"\n  • \"Where can I find [service] in [region]?\"\n  • \"Why is [industry topic] important for [audience]?\"\n\n## `keyword_collections.aieo_terms` (array — EXACTLY 10 items)\n→ AI Engine Optimization — comparison, evaluation, and recommendation phrases that AI chat tools (ChatGPT, Claude, Gemini, Perplexity) surface.\n→ Format patterns:\n  • \"Compare [client product/service] vs [competitor category] for [use case]\"\n  • \"[Product/service] reviews 2026\"\n  • \"Top [product category] for [audience type] in [region]\"\n  • \"Best alternative to [competitor type] for [use case]\"\n  • \"[Service] pricing comparison [region]\"\n\n# QUALITY GATES (silent self-check before emitting)\n\nBefore emitting your first character, verify mentally:\n\n```\n☐ Output begins with `{` and ends with `}`\n☐ No markdown fences, no code blocks, no commentary\n☐ client_name is byte-identical to Source 1 Company Legal Name\n☐ Every Source 1 field is preserved exactly or faithfully synthesized\n☐ Source 3 PDF rules are reflected in tone, colors, and visual_restrictions\n☐ No fabricated information that contradicts Tier 1 sources\n☐ No invented HEX codes, URLs, product names, or statistics\n☐ Array counts are EXACT:\n    • values = 5\n    • slogans ≥ 2\n    • interests = 5\n    • pain_points = 5\n    • segments = 5\n    • seo_keywords = 10\n    • aeo_phrases = 10\n    • aieo_terms = 10\n☐ All strings are JSON-escaped (no unescaped quotes, no raw newlines inside string values)\n☐ cta_links object contains exactly three keys: primary, secondary, tertiary\n☐ arabic_content is one of: \"Yes\" | \"No\" | \"Maybe\" (no other values allowed)\n☐ income_tier matches the enumerated set exactly\n☐ Empty values are `\"\"` (empty string) — never `null`, never `\"N/A\"`, never `\"TBD\"`, never `\"None\"`\n☐ No language detected in output other than the language of the source material\n```\n\nIf ANY check fails, fix silently before emitting. Do not narrate the fix. Do not explain what was wrong. Just emit corrected JSON.\n\n═══════════════════════════════════════════════════════════\nINPUT DATA BEGINS BELOW\n═══════════════════════════════════════════════════════════\n\n# SOURCE 1 — CLIENT FORM SUBMISSION (AUTHORITATIVE)\n\nCompany Legal Name: {{ $('Map Form Data').item.json.client_name }}\nIndustry: {{ $('Map Form Data').item.json.industry }}\nCompany Description: {{ $('Map Form Data').item.json.company_description }}\nTarget Audience Description: {{ $('Map Form Data').item.json.target_audience_raw }}\nB2B Type: {{ $('Map Form Data').item.json.b2b_type }}\nBrand Voice/Tone: {{ $('Map Form Data').item.json.brand_voice }}\nBrand Colors (HEX): {{ $('Map Form Data').item.json.brand_colors }}\nVisual Restrictions: {{ $('Map Form Data').item.json.visual_restrictions }}\nVisual Feel: {{ $('Map Form Data').item.json.visual_feel }}\nSelected Platforms: {{ $('Map Form Data').item.json.platforms }}\nCTA Text Preference: {{ $('Map Form Data').item.json.cta_text }}\nPrimary CTA Link: {{ $('Map Form Data').item.json.cta_link_primary }}\nSecondary CTA Link: {{ $('Map Form Data').item.json.cta_link_secondary }}\nTertiary CTA Link: {{ $('Map Form Data').item.json.cta_link_tertiary }}\nArabic Content Required: {{ $('Map Form Data').item.json.arabic_content }}\nBanner Size Requirements: {{ $('Map Form Data').item.json.banner_size_requirements }}\nContent Types Needed: {{ $('Map Form Data').item.json.content_types }}\nPlan Selected: {{ $('Map Form Data').item.json.plan_selected }}\nCompetitor / Reference Websites: {{ $('Map Form Data').item.json.competitor_refs }}\n\n# SOURCE 3 — BRAND GUIDELINES PDF (AUTHORITATIVE)\n\n{{ $json.brand_guidelines_content || 'No brand guidelines PDF provided. Build profile from Sources 1 and 2 only. Do not fabricate PDF content.' }}\n\n# SOURCE 2 — CRAWLED WEBSITE CONTENT (SUPPLEMENTARY ONLY)\n\n{{ $('Clean and Combine Crawl Pages').item.json.scraped_markdown || 'Website crawl unavailable. Build profile from Sources 1 and 3 only. Do not fabricate website content.' }}\n\n═══════════════════════════════════════════════════════════\nEMIT JSON NOW. NOTHING ELSE. FIRST CHARACTER MUST BE `{`.\n═══════════════════════════════════════════════════════════"
+            }
+          ]
+        },
+        "simplify": false,
+        "jsonOutput": true,
+        "builtInTools": {},
+        "options": {
+          "includeMergedResponse": false,
+          "candidateCount": 1,
+          "presencePenalty": 0,
+          "temperature": 0,
+          "topP": 0.1,
+          "topK": 1,
+          "thinkingBudget": -1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        2112,
+        176
+      ],
+      "id": "f81711c0-4d4d-48da-8225-6763b55a3d2a",
+      "name": "AI: Extract Brand Intelligence",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "LMokzqlptXWbawE6",
+          "name": "content management api"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "Clients",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "client_uid",
+              "fieldValue": "={{ $('Map Form Data').item.json.client_uid }}"
+            },
+            {
+              "fieldId": "client_name",
+              "fieldValue": "={{ JSON.parse($json.candidates[0].content.parts[0].text).client_name }}"
+            },
+            {
+              "fieldId": "website_url",
+              "fieldValue": "={{ $('Map Form Data').item.json.website_url }}"
+            },
+            {
+              "fieldId": "contact_person",
+              "fieldValue": "={{ $('Map Form Data').item.json.contact_person }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('Map Form Data').item.json.email }}"
+            },
+            {
+              "fieldId": "whatsapp",
+              "fieldValue": "={{ $('Map Form Data').item.json.whatsapp }}"
+            },
+            {
+              "fieldId": "plan_selected",
+              "fieldValue": "={{ $('Map Form Data').item.json.plan_selected }}"
+            },
+            {
+              "fieldId": "brand_guidelines",
+              "fieldValue": "={{ JSON.parse($json.candidates[0].content.parts[0].text).brand_guidelines }}"
+            },
+            {
+              "fieldId": "target_audience",
+              "fieldValue": "={{ JSON.parse($json.candidates[0].content.parts[0].text).target_audience }}"
+            },
+            {
+              "fieldId": "keyword_collections",
+              "fieldValue": "={{ JSON.parse($json.candidates[0].content.parts[0].text).keyword_collections }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "Client_Profile_Created"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2576,
+        176
+      ],
+      "id": "4daf0a35-e109-4cab-bbdb-4aed05d06b4b",
+      "name": "DB: Save New Client Profile",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "={{ $('Map Form Data').item.json.client_uid }} - {{ $('DB: Save New Client Profile').item.json.client_name }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1FxwBC2gIPGdjIrn1Ka12ZU4FLNWKS_Ai",
+          "mode": "list",
+          "cachedResultName": "Client Contents",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1FxwBC2gIPGdjIrn1Ka12ZU4FLNWKS_Ai"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2752,
+        176
+      ],
+      "id": "6ccdc088-9211-4e78-b45e-0b47264362c9",
+      "name": "Drive: Create Client Folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "sbINNLBW9tFyLYX1",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Clients",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('DB: Save New Client Profile').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "drive_folder_url",
+              "fieldValue": "={{ 'https://drive.google.com/drive/folders/' + $json.id }}"
+            },
+            {
+              "fieldId": "drive_folder_id",
+              "fieldValue": "={{ $json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2944,
+        176
+      ],
+      "id": "95541c5c-c4f6-420e-8e7f-88b39e2ba192",
+      "name": "DB: Save Drive Info",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "spreadsheet",
+        "title": "={{ $('Map Form Data').item.json.client_uid }} - {{ $json.client_name }} - Content Calendar",
+        "sheetsUi": {
+          "sheetValues": [
+            {
+              "title": "Content Calendar"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3152,
+        176
+      ],
+      "id": "3683caff-f290-4117-b75c-d521dad95fad",
+      "name": "Sheets: Create Content Calendar",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "cxrImtgrJYgfX5Xt",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.spreadsheetId }}",
+          "mode": "id"
+        },
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Drive: Create Client Folder').item.json.id }}",
+          "mode": "id"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3360,
+        176
+      ],
+      "id": "30e3888f-c27f-415f-a091-0b2f2ca98e38",
+      "name": "Drive: Move Sheet to Client Folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "sbINNLBW9tFyLYX1",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Clients",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('DB: Save New Client Profile').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "sheets_id",
+              "fieldValue": "={{ $('Sheets: Create Content Calendar').item.json.spreadsheetId }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3584,
+        176
+      ],
+      "id": "21a6e9a0-12be-4083-96a6-e7ae89eeed4e",
+      "name": "DB: Save Sheets ID",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Authorized_Users",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "role",
+              "condition": "eq",
+              "keyValue": "Admin"
+            },
+            {
+              "keyName": "is_active",
+              "condition": "eq",
+              "keyValue": "true"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        4032,
+        176
+      ],
+      "id": "85996ec2-2444-4d86-bb64-a37c8afc4dcb",
+      "name": "DB: Get Admin Users",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('DB: Get Admin Users').first().json.telegram_id }}",
+        "text": "==✅ New Client Onboarded!\n\n🆔 UID: {{ $('Map Form Data').item.json.client_uid }}\n🏢 Client: {{ $('DB: Save New Client Profile').item.json.client_name }}\n👤 Contact: {{ $('Map Form Data').item.json.contact_person }}\n🌐 Website: {{ $('Map Form Data').item.json.website_url }}\n💼 Plan: {{ $('Map Form Data').item.json.plan_selected }}\n📱 Platforms: {{ $('Map Form Data').item.json.platforms }}\n📁 Drive: {{ 'https://drive.google.com/drive/folders/' + $('Drive: Create Client Folder').item.json.id }}\n🌍 Website Crawled: {{ $('Clean and Combine Crawl Pages').item.json.scraped_markdown ? 'Yes ✅ (' + $('Clean and Combine Crawl Pages').item.json.pages_crawled + ' pages)' : 'No — form data only ⚠️' }}\n📄 Brand Guidelines PDF: {{ $('Merge Brand References').first().json.brand_guidelines_content ? 'Yes ✅' : 'Not provided ⚠️' }}\n\nBrand profile created. Phase 2 content planning triggered.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4256,
+        176
+      ],
+      "id": "f001f842-3388-47b0-977b-58b64f241fd5",
+      "name": "Telegram: Send Success Message",
+      "webhookId": "dd7acfb9-b06b-4116-9004-5595cda66f22",
+      "credentials": {
+        "telegramApi": {
+          "id": "Gg4nrOPfTddNGNV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "qmfp1koxmFhIVSPi",
+          "mode": "list",
+          "cachedResultUrl": "/n8n/workflow/qmfp1koxmFhIVSPi",
+          "cachedResultName": "PHASE 2A - Content Calendar Parser"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telegram_id": "={{ $('DB: Get Admin Users').first().json.telegram_id }}",
+            "client_id": "={{ $('DB: Save New Client Profile').item.json.id }}",
+            "client_uid": "={{ $('Map Form Data').item.json.client_uid }}",
+            "target_audience": "={{ $('DB: Save New Client Profile').item.json.target_audience }}",
+            "brand_guidelines": "={{ $('DB: Save New Client Profile').item.json.brand_guidelines }}",
+            "keyword_collections": "={{ $('DB: Save New Client Profile').item.json.keyword_collections }}",
+            "sheets_id": "={{ $('Sheets: Create Content Calendar').item.json.spreadsheetId }}",
+            "client_name": "={{ $('DB: Save New Client Profile').item.json.client_name }}",
+            "drive_folder_id": "={{ $('Drive: Create Client Folder').item.json.id }}"
+          },
+          "matchingColumns": [
+            "client_id"
+          ],
+          "schema": [
+            {
+              "id": "telegram_id",
+              "displayName": "telegram_id",
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "display": true,
+              "required": false,
+              "defaultMatch": false,
+              "removed": false
+            },
+            {
+              "id": "client_id",
+              "displayName": "client_id",
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "display": true,
+              "required": false,
+              "defaultMatch": true,
+              "removed": false
+            },
+            {
+              "id": "client_uid",
+              "displayName": "client_uid",
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "display": true,
+              "required": false,
+              "defaultMatch": false,
+              "removed": false
+            },
+            {
+              "id": "client_name",
+              "displayName": "client_name",
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "display": true,
+              "required": false,
+              "defaultMatch": false,
+              "removed": false
+            },
+            {
+              "id": "brand_guidelines",
+              "displayName": "brand_guidelines",
+              "type": "object",
+              "canBeUsedToMatch": false,
+              "display": true,
+              "required": false,
+              "defaultMatch": false,
+              "removed": false
+            },
+            {
+              "id": "target_audience",
+              "displayName": "target_audience",
+              "type": "object",
+              "canBeUsedToMatch": false,
+              "display": true,
+              "required": false,
+              "defaultMatch": false,
+              "removed": false
+            },
+            {
+              "id": "keyword_collections",
+              "displayName": "keyword_collections",
+              "type": "object",
+              "canBeUsedToMatch": false,
+              "display": true,
+              "required": false,
+              "defaultMatch": false,
+              "removed": false
+            },
+            {
+              "id": "sheets_id",
+              "displayName": "sheets_id",
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "display": true,
+              "required": false,
+              "defaultMatch": false,
+              "removed": false
+            },
+            {
+              "id": "drive_folder_id",
+              "displayName": "drive_folder_id",
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "display": true,
+              "required": false,
+              "defaultMatch": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        4480,
+        176
+      ],
+      "id": "c85e56c0-9001-42d1-92c4-e38f09b49653",
+      "name": "Trigger: Phase 2 Sub-Workflow"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "bdded341-e079-431d-ad67-9d6e901fbfe9",
+              "leftValue": "={{ $json.client_name }}",
+              "rightValue": "=",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "b7b601dc-954f-4e37-be30-0482574d1df1",
+              "leftValue": "={{ $json.website_url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "d995ae89-3d1b-434d-8ec2-39ffaaf524b3",
+              "leftValue": "={{ $json.client_uid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -352,
+        80
+      ],
+      "id": "d46de0a7-9c05-4b7b-a1c9-f1e48a1210ae",
+      "name": "Validate: Required Form Fields"
+    },
+    {
+      "parameters": {
+        "errorMessage": "Phase 1 Aborted: Missing required fields — client_name, website_url, or industry is empty"
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        96,
+        -16
+      ],
+      "id": "a00d681d-04e9-44f6-b475-2de4a19c9d9e",
+      "name": "Stop and Error"
+    },
+    {
+      "parameters": {
+        "chatId": "8244436566",
+        "text": "=⚠️ Phase 1 Aborted — Invalid Form Submission  🆔 UID: {{ $json.client_uid \n\n 'MISSING' }} 🏢 Client Name: {{ $json.client_name \n\n 'MISSING' }} 🌐 Website: {{ $json.website_url \n\n 'MISSING' }} \n\n 'MISSING' }}  Action: Check the form response sheet and fix the missing fields.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -128,
+        -16
+      ],
+      "id": "5e478d37-8ea6-45c8-a6a8-84887acfd39e",
+      "name": "Invalid Form Submission Message",
+      "webhookId": "0a7c2fae-0c38-4104-bc8e-29406920483f",
+      "credentials": {
+        "telegramApi": {
+          "id": "Gg4nrOPfTddNGNV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://172.17.0.1:3002/v1/crawl",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"url\": \"{{ $json.website_url }}\",\n  \"limit\": 10,\n  \"scrapeOptions\": {\n    \"formats\": [\"markdown\"],\n    \"onlyMainContent\": true\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -128,
+        176
+      ],
+      "id": "7445abf6-fb59-4b69-aaea-03be13cb9cd9",
+      "name": "Start Crawl (Firecrawl)",
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gIDg1zvdctKnmZBH",
+          "name": "Header Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "amount": 45
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        96,
+        176
+      ],
+      "id": "7dee2b05-15d4-416e-9db6-e3ba6321db65",
+      "name": "Wait: Crawl Processing",
+      "webhookId": "crawl-wait-001"
+    },
+    {
+      "parameters": {
+        "url": "=http://172.17.0.1:3002/v1/crawl/{{ $('Start Crawl (Firecrawl)').item.json.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        320,
+        176
+      ],
+      "id": "7e0f6666-388a-4d38-8ffe-7a97e4fa4432",
+      "name": "Get Crawl Results (Firecrawl)",
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "gIDg1zvdctKnmZBH",
+          "name": "Header Auth account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "document",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-pro",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-pro"
+        },
+        "text": "You are a meticulous brand identity extraction specialist. You are analyzing an official brand guidelines PDF document. Your output flows directly into a database with no human review, so accuracy is critical and fabrication is forbidden.\n\n# CORE RULE — ANTI-HALLUCINATION\n\nYou may ONLY report what is VISIBLY PRESENT in this document. You are reading, not inventing.\n\n- If a HEX code, font name, color value, or rule is NOT visible in the document, return an empty string \"\" for that field — NEVER guess.\n- NEVER invent HEX codes. If you see a color swatch but no HEX value is printed next to it, report only the printed value type that IS shown (RGB, CMYK, or Pantone). Do not convert or estimate.\n- NEVER fabricate brand values, slogans, or rules that are not explicitly stated or clearly illustrated.\n- If the document is in a language you can read partially, extract only what you can confidently read. Do not guess at obscured text.\n- Quote restrictions and rules VERBATIM where possible. Do not paraphrase compliance-related instructions.\n\n# EXTRACTION METHOD\n\nRead EVERY page systematically. Brand guideline documents typically place:\n- Color values on dedicated color pages (look for Pantone, CMYK, RGB, and HEX labels next to swatches)\n- Font names on typography pages\n- Logo rules on the early \"Basic Part\" pages\n- Product and packaging info on later \"Application\" and \"Packaging\" pages\n\nCapture color values in ALL formats shown (Pantone + CMYK + RGB + HEX). Many brand books list Pantone and RGB but not HEX — report exactly what is printed.\n\n# OUTPUT CONTRACT\n\nReturn ONLY a raw JSON object. No preamble. No explanation. No markdown fences. No code blocks. First character must be { and last must be }.\n\nUse this exact schema:\n\n{\n  \"brand_colors_primary\": \"primary brand color(s) with ALL values shown in the document — include Pantone, CMYK, RGB, and HEX exactly as printed. Example format: 'PANTONE 7686 C / C100 M70 Y15 K0 / R0 G79 B147'\",\n  \"brand_colors_auxiliary\": \"all auxiliary/secondary colors with ALL values printed for each, separated by semicolons\",\n  \"product_colors\": \"any separate product/packaging color palette with values exactly as shown\",\n  \"typography_fonts\": \"all font names explicitly named in the document — empty string if none named\",\n  \"logo_description\": \"describe the logo's shape, component colors, and stated design concept based on what the document explains\",\n  \"logo_concept_keywords\": [\"keywords the document uses to describe the logo meaning, e.g. glacier, arrow, energy\"],\n  \"brand_values\": [\"only values explicitly stated or clearly illustrated in the document\"],\n  \"tone_voice\": \"brand tone/voice IF described in the document, otherwise empty string\",\n  \"visual_style\": \"describe the overall visual aesthetic based on observed design choices\",\n  \"visual_restrictions\": \"all dos, donts, and usage restrictions stated in the document, quoted as closely as possible\",\n  \"logo_usage_rules\": \"logo clear space rules, minimum sizes (with exact measurements shown), grid rules\",\n  \"background_rules\": \"approved background usage rules including any brightness percentage thresholds stated\",\n  \"slogans_taglines\": [\"only real taglines/slogans printed in the document — empty array if none\"],\n  \"product_categories\": [\"all product categories or product names mentioned in the document\"],\n  \"packaging_style\": \"packaging design philosophy and rules as stated\",\n  \"additional_notes\": \"any other concrete brand identity rules, measurements, or specifications found\"\n}\n\n# QUALITY GATES (verify before emitting)\n\n- Output is valid JSON starting with { and ending with }\n- Every HEX/color value reported actually appears in the document — none invented\n- Empty fields use \"\" or [] — never null, never \"N/A\", never guessed content\n- Restrictions are quoted faithfully, not softened\n- Color values preserve the exact format printed (do not convert Pantone to HEX yourself)\n- All array fields contain only document-sourced items\n\nIf a field has no supporting evidence in the document, leave it empty. An empty field is correct; an invented field is a failure.\n\nEmit the JSON now. Nothing else.",
+        "inputType": "binary",
+        "simplify": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1440,
+        80
+      ],
+      "id": "da5a390c-c309-46ef-96c6-8b7f9f7a153d",
+      "name": "Analyze document",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "LMokzqlptXWbawE6",
+          "name": "content management api"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1jAIKo4NNX-cjvOoWBRt8Ke435KPOW7q3dKwOr3Lak6Y",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1854393183,
+          "mode": "list",
+          "cachedResultName": "Form Responses 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1jAIKo4NNX-cjvOoWBRt8Ke435KPOW7q3dKwOr3Lak6Y/edit#gid=1854393183"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "UID": "={{ $('Map Form Data').item.json.client_uid }}",
+            "Output Drive": "={{ 'https://drive.google.com/drive/folders/' + $('Drive: Create Client Folder').item.json.id }}",
+            "Status": "Onboarded"
+          },
+          "matchingColumns": [
+            "UID"
+          ],
+          "schema": [
+            {
+              "id": "UID",
+              "displayName": "UID",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Output Drive",
+              "displayName": "Output Drive",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3808,
+        176
+      ],
+      "id": "d5f242fd-5720-4bf8-ad04-d2ed4e4fb062",
+      "name": "Sheets: Write Back UID & Drive Link",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "cxrImtgrJYgfX5Xt",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine all crawled pages into one clean markdown string\nconst results = $json.data || [];\nconst crawlStatus = $json.status || 'unknown';\n\n// If crawl failed or returned nothing\nif (results.length === 0) {\n  return [{\n    json: {\n      scraped_markdown: 'Crawl returned no usable content.',\n      pages_crawled: 0,\n      crawl_status: crawlStatus\n    }\n  }];\n}\n\n// Skip patterns based on CONTENT TYPE not client-specific URLs\n// These are universally useless pages across any website\nconst skipPatterns = [\n  '/cart',\n  '/checkout',\n  '/account',\n  '/login',\n  '/register',\n  '/password',\n  '/search',\n  '/404',\n  'agents.md',\n  '.xml',\n  '.txt',\n  '.json'\n];\n\nconst combined = results\n  // Skip universally useless page types\n  .filter(page => {\n    const url = (page.metadata?.url || page.url || '').toLowerCase();\n    return !skipPatterns.some(pattern => url.includes(pattern));\n  })\n  // Only keep pages with meaningful content (raised threshold)\n  .filter(page => page.markdown && page.markdown.length > 300)\n  .map(page => {\n    const url = page.metadata?.url || page.url || 'unknown page';\n    const content = (page.markdown || '')\n      // Remove image markdown but keep alt text\n      .replace(/!\\[([^\\]]*)\\]\\([^)]*\\)/g, '$1')\n      // Remove bare URLs not inside markdown links\n      .replace(/(?<!\\()https?:\\/\\/\\S+(?!\\))/g, '')\n      // Remove skip to content navigation\n      .replace(/\\[Skip to content\\]\\([^)]*\\)/gi, '')\n      // Remove media gallery notices\n      .replace(/Open (featured )?media \\d+ in gallery view/gi, '')\n\n      // === CART BOILERPLATE REMOVAL (improved) ===\n      .replace(/There.{0,5}s nothing in your cart yet/gi, '')\n      .replace(/\\byet\\n+Loading\\.\\.\\./gi, '')\n      .replace(/Order special instructions[\\s\\S]{0,300}?View Cart[^\\n]*/gi, '')\n      .replace(/\\$0\\.00\\s*USD\\n[\\s\\S]{0,150}?calculated at checkout/gi, '')\n      .replace(/Checkout\\s+\\[View Cart\\][^\\n]*/gi, '')\n      .replace(/Loading\\.\\.\\./gi, '')\n      .replace(/\\*\\s+\\.\\s*$/gm, '')\n      .replace(/\\[Start Shopping\\][^\\n]*/gi, '')\n      .replace(/Taxes and[^\\n]*calculated at checkout/gi, '')\n      .replace(/Choosing a selection results in a full page refresh/gi, '')\n      // Remove orphaned cart header and list items\n      .replace(/^Cart\\s+\\d+\\s*[-]*\\s*$/gm, '')\n      .replace(/^-{3,}\\s*$/gm, '')\n      .replace(/^\\*\\s+\\.\\s*$/gm, '')\n      // Remove e-commerce pricing patterns\n      .replace(/Regular price[\\s\\S]{0,80}?Sale price/gi, '')\n      .replace(/Unit price[^\\n]*/gi, '')\n      .replace(/Variant sold out or unavailable/gi, '')\n      .replace(/Decrease quantity for[^\\n]*/gi, '')\n      .replace(/Increase quantity for[^\\n]*/gi, '')\n      .replace(/Add to Cart\\s*\\n/gi, '')\n      .replace(/Buy it now\\s*\\n/gi, '')\n\n      // Remove copyright and footer junk\n      .replace(/all rights reserved.*?(\\n|$)/gi, '')\n      .replace(/©\\s*\\d{4}.*?(\\n|$)/g, '')\n      .replace(/privacy policy.*?terms.*?(\\n|$)/gi, '')\n      .replace(/cookie.*?(accept|decline|manage).*?(\\n|$)/gi, '')\n\n      // Remove social share buttons\n      .replace(/share (on|this|via)[^\\n]*/gi, '')\n\n      // Remove WordPress pixel tracker\n      .replace(/.*pixel\\.wp\\.com.*?(\\n|$)/g, '')\n\n      // Remove repeated achievement/stat placeholders\n      .replace(/^00\\s*$/gm, '')\n\n      // Collapse excessive blank lines and spaces\n      .replace(/\\n{3,}/g, '\\n\\n')\n      .replace(/[ \\t]{2,}/g, ' ')\n      .trim()\n      // Cap each page at 2500 chars\n      .substring(0, 2500);\n\n    return `## Page: ${url}\\n\\n${content}`;\n  })\n  // Remove pages that became too short after cleaning (raised threshold)\n  .filter(page => page.length > 200)\n  .join('\\n\\n---\\n\\n')\n  // Cap total at 14000 chars\n  .substring(0, 14000);\n\nreturn [{\n  json: {\n    scraped_markdown: combined || 'Crawl returned no usable content after cleaning.',\n    pages_crawled: results.length,\n    crawl_status: crawlStatus\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        176
+      ],
+      "id": "250abe78-a526-44c5-9161-10666d52c7e1",
+      "name": "Clean and Combine Crawl Pages"
+    }
+  ],
+  "pinData": {
+    "Trigger: Form Submission": [
+      {
+        "json": {
+          "UID": "CLT-2026-0001",
+          "Timestamp": "5/8/2026 19:20:34",
+          "Email Address": "tong.li@gletscherenergy.com",
+          "Company Legal Name": "Gletscher Energy",
+          "Contact Person Name": "Cherrie",
+          "WhatsApp number": "+971 504298058",
+          "Website URL": "www.gletscherenergy.com",
+          "Primary Industry/Niche": "Renewable Energy",
+          "Brief Description of your Company's Products/Services": "Gletscher Energy is a sustainable energy solutions brand offering solar panels, inverters, battery storage systems, UPS backup power, portable power stations, power banks, solar street lights, and EV-related products. The brand serves commercial, industrial, residential, retail, infrastructure, and government-related markets. Marketing should position Gletscher as a reliable, future-focused energy partner for renewable energy, backup power, energy storage, smart infrastructure, and sustainable development.",
+          "Primary Target Audience Description (Demographics, Pain Points, etc.)": "System integrators and distributors in middle east and africa",
+          "If your customer are B2B how do you define yourself?": "Manufacturer",
+          "Choose Plan that suits you best": "AI Content creation with Experts' Optimization @ AED1699 | 60 AI created ,expert optimized content",
+          "Do you wish us to create monthly marketing plans for you?": "Yes | Extra 10% of Total invoice",
+          "Do you wish us to  manage every social media from one plat form for on company @AED 399": "Yes | Extra AED 399",
+          "Do you wish to have Arabic content?": "No",
+          "Upload Company Logo (High Resolution - PNG/Vector preferred)": "https://drive.google.com/open?id=148QhFF_oo7o0uIgyY2KX-tGWcQJNN2Bp ",
+          "Do you have existing Brand Guidelines or a Style Guide? you can also reference your competition website in the other column .": "Yes, I will upload the document.",
+          "Upload Brand Guidelines Document (PDF/DOCX - if applicable)": "https://drive.google.com/open?id=1-mcgQXKLkGEHnYuBN7HrgKHRNSUy-OgY",
+          "Competitor or Reference Websites": "",
+          "What are your company's core Brand Colors? (e.g., provide HEX codes)": "Refer to guideline pdf",
+          "What is your primary Brand Voice/Tone?": "Professional/Formal, Informative/Educational",
+          "Are there any specific visual elements (fonts, icons, design patterns) that MUST be used or strictly avoided in marketing collateral?": "Make sure contents will not conflict with government policies and values. For example, no words related to war, no pictures of real cities or buildings. ",
+          "Poster/Banner Design Preferences: What feel should the visuals convey?": "Photo-heavy and Realistic",
+          "Apart from standard requirements Do you have specific size or resolution requirements for digital posters/banners  ? (e.g., Instagram Story, Facebook Ad, LinkedIn Banner)": "Please follow this brand's guideline: https://www.instagram.com/p/DXKI6frEuuB/?igsh=eWpkNGF5NmdsZnJs",
+          "Upload digital posters/banners Guidelines Document (PDF/DOCX - if applicable)": "",
+          "what are the type of the content needed?": "",
+          "Which social platforms are most critical for your current marketing goals?": "Facebook, Instagram, LinkedIn, Pinterest",
+          "What is the desired Call-to-Action (CTA) for most of our marketing campaigns?": "Contact Us/Request a Demo",
+          "Primary CTA Link (Website)": "https://www.gletscherenergy.com/pages/contact?contact_posted=true#ContactForm",
+          "Secondary CTA Link (Meta/LinkedIn/Social)": "https://www.linkedin.com/company/gletscherenergy/",
+          "Tertiary CTA Link (WhatsApp/Other)": "https://wa.me/971589026788",
+          "When is the day to call you back?": "5/9/2026",
+          "When is the right time to call you back?": "10:00:00 AM",
+          "Status": "",
+          "By checking this box, I acknowledge that I have read, understood, and agree to be bound by the Terms and Conditions and Privacy Policy. ": "Yes I agree"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Trigger: Form Submission": {
+      "main": [
+        [
+          {
+            "node": "Map Form Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Form Data": {
+      "main": [
+        [
+          {
+            "node": "Validate: Required Form Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Brand References": {
+      "main": [
+        [
+          {
+            "node": "Route by Reference Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Reference Type": {
+      "main": [
+        [
+          {
+            "node": "Download Brand Guidelines PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Brand Guidelines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Brand Guidelines PDF": {
+      "main": [
+        [
+          {
+            "node": "Analyze document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Brand Guidelines Text": {
+      "main": [
+        [
+          {
+            "node": "Merge Brand References",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Brand Guidelines": {
+      "main": [
+        [
+          {
+            "node": "Merge Brand References",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Brand References": {
+      "main": [
+        [
+          {
+            "node": "AI: Extract Brand Intelligence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI: Extract Brand Intelligence": {
+      "main": [
+        [
+          {
+            "node": "DB: Save New Client Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Save New Client Profile": {
+      "main": [
+        [
+          {
+            "node": "Drive: Create Client Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drive: Create Client Folder": {
+      "main": [
+        [
+          {
+            "node": "DB: Save Drive Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Save Drive Info": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Create Content Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Create Content Calendar": {
+      "main": [
+        [
+          {
+            "node": "Drive: Move Sheet to Client Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drive: Move Sheet to Client Folder": {
+      "main": [
+        [
+          {
+            "node": "DB: Save Sheets ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Save Sheets ID": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Write Back UID & Drive Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Get Admin Users": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Send Success Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram: Send Success Message": {
+      "main": [
+        [
+          {
+            "node": "Trigger: Phase 2 Sub-Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate: Required Form Fields": {
+      "main": [
+        [
+          {
+            "node": "Start Crawl (Firecrawl)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid Form Submission Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invalid Form Submission Message": {
+      "main": [
+        [
+          {
+            "node": "Stop and Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Crawl (Firecrawl)": {
+      "main": [
+        [
+          {
+            "node": "Wait: Crawl Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait: Crawl Processing": {
+      "main": [
+        [
+          {
+            "node": "Get Crawl Results (Firecrawl)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Crawl Results (Firecrawl)": {
+      "main": [
+        [
+          {
+            "node": "Clean and Combine Crawl Pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze document": {
+      "main": [
+        [
+          {
+            "node": "Format Brand Guidelines Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Write Back UID & Drive Link": {
+      "main": [
+        [
+          {
+            "node": "DB: Get Admin Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean and Combine Crawl Pages": {
+      "main": [
+        [
+          {
+            "node": "Parse Brand References",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "115e7ad4-4ddd-48fc-ae51-ec1020d19e00",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "27691624a7c7d2a9124a20717f3db6f18f26825f3de4bc41f1be750963b9ae26"
+  },
+  "id": "CFQMf1MST0pNQ2u0",
+  "tags": []
+}

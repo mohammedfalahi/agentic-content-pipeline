@@ -1,0 +1,194 @@
+{
+  "name": "Telegram Master Router Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🚦 TELEGRAM ROUTER — v3 (Payload Merge Fix)\n\nWorkflow Description\nOverview\nThe Telegram Master Router (v3) serves as the centralized orchestration gateway for all incoming interaction payloads from the agency's Telegram Bot. To protect webhook stability and prevent competing n8n triggers, this is the only workflow with an active Telegram trigger node. It acts as an intelligent traffic controller—parsing, validating, and dispatching payloads natively to respective sub-workflows.\n\nRouting Logic Breakdown\nThe workflow evaluates incoming meta-data and dynamically funnels traffic down three distinct operation pipelines:\n\nApprove / Revise Button Path: Intercepts inline keyboard button clicks (callback_query) from managers reviewing assets and triggers the Phase 2b Approval/Revision Handler.\n\nNew Client Command Path: Catches the explicit text command /newclient to immediately initialize the onboarding sequence and flag the system for intake.\n\nContextual Plain-Text Fallback Path: For regular plain-text messages, the router performs an real-time state check against the Supabase Authorized_Users database:\n\nState = AWAITING_URL: The system recognizes that the admin is submitting a target brand link for an active onboarding session. The payload is automatically funnelled to the Phase 1 URL Intake Sub-Workflow.\n\nState = Any Other/IDLE: The plain-text is treated as structural feedback and funnelled directly to the Phase 2b Revision Reply Capture Workflow.",
+        "height": 1184,
+        "width": 1624,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        592,
+        384
+      ],
+      "id": "af136c58-461b-4f71-b91d-0d8509f70d0a",
+      "name": "Header Note"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        960,
+        1168
+      ],
+      "id": "56395653-aedf-4d21-a2b8-8b283dce3ca0",
+      "name": "Telegram: Single Bot Trigger",
+      "webhookId": "router-single-trigger-wh-v3",
+      "credentials": {
+        "telegramApi": {
+          "id": "Gg4nrOPfTddNGNV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "cond-callback",
+                    "leftValue": "={{ $json.callback_query?.id }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Approve / Revise Button"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "cond-revision-reply",
+                    "leftValue": "={{ $json.message?.reply_to_message?.message_id }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Revision Reply"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1184,
+        1152
+      ],
+      "id": "4b7ea0e7-e5e4-4f76-9813-9d233566daf1",
+      "name": "Router: What Type of Message?"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "TUeDSwccCC8uB39p",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1408,
+        976
+      ],
+      "id": "49f79c3a-3c89-419a-b428-bfc6e0b0b4e0",
+      "name": "Run: Phase 2b — Approve / Revise Handler"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "pyAnwfatkHU0UWNm",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        1408,
+        1168
+      ],
+      "id": "74f385fd-5708-487f-b668-b27b6dc13380",
+      "name": "Run: Revision Reply Capture"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram: Single Bot Trigger": {
+      "main": [
+        [
+          {
+            "node": "Router: What Type of Message?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Router: What Type of Message?": {
+      "main": [
+        [
+          {
+            "node": "Run: Phase 2b — Approve / Revise Handler",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Run: Revision Reply Capture",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "df1007e2-ff74-44a6-92f9-9348390e0816",
+  "meta": {
+    "instanceId": "27691624a7c7d2a9124a20717f3db6f18f26825f3de4bc41f1be750963b9ae26"
+  },
+  "id": "mmRd1IPYT4ChzOyv",
+  "tags": []
+}

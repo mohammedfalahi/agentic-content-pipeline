@@ -1,0 +1,1578 @@
+{
+  "name": "PHASE 2A - Content Calendar Parser copy",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🧠 1. AI Content Engine\nReceives client data from Phase 1, prompts Gemini to autonomously generate a 30-day strategy (formats, topics, image prompts, keywords), and formats the JSON into a clean array.",
+        "height": 364,
+        "width": 1380,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        1232
+      ],
+      "id": "1b188e04-ddd6-446d-bbd9-a15e762e93f5",
+      "name": "Sticky Note 1"
+    },
+    {
+      "parameters": {
+        "content": "## 🗄️ 2. Database & Sheets Sync\nLoops through the 30 generated days, saving them simultaneously as individual rows in the Supabase Content_Calendar table and appending them to the client's Google Sheet.",
+        "height": 482,
+        "width": 598,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1392,
+        1152
+      ],
+      "id": "a460cce0-1255-4639-9b19-383c98e06093",
+      "name": "Sticky Note 2"
+    },
+    {
+      "parameters": {
+        "content": "## 📄 3. Approval Doc & Hand-off\nCompiles all 30 days into a readable Google Doc format, generates the live file, sends an interactive Approval/Revise button to the manager via Telegram, and saves the Doc URL to the client profile.",
+        "height": 284,
+        "width": 1346
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        1360
+      ],
+      "id": "320934fe-31bc-4949-b9f1-ffdae3fed0cf",
+      "name": "Sticky Note 3"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "telegram_id",
+              "type": "number"
+            },
+            {
+              "name": "client_id"
+            },
+            {
+              "name": "client_name"
+            },
+            {
+              "name": "brand_guidelines",
+              "type": "object"
+            },
+            {
+              "name": "target_audience",
+              "type": "object"
+            },
+            {
+              "name": "keyword_collections",
+              "type": "object"
+            },
+            {
+              "name": "sheets_id"
+            },
+            {
+              "name": "drive_folder_id"
+            },
+            {
+              "name": "client_uid"
+            },
+            {
+              "name": "product_catalog",
+              "type": "array"
+            },
+            {
+              "name": "content_themes",
+              "type": "array"
+            },
+            {
+              "name": "logo_concept_keywords",
+              "type": "array"
+            },
+            {
+              "name": "competitor_context",
+              "type": "array"
+            },
+            {
+              "name": "typography_fonts"
+            },
+            {
+              "name": "banner_size_requirements"
+            },
+            {
+              "name": "content_types_requested"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        48,
+        1376
+      ],
+      "id": "fe3a9ce3-1f94-499a-b4c5-dfd4f14662f1",
+      "name": "Trigger: Start Phase 2"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3-pro-preview",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3-pro-preview"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a Senior Content Strategist inside a production automation pipeline. Your output is parsed directly by code and drives Phase 3 content creation day by day. Every field is machine-consumed. Treat every character as load-bearing.\n\n# OUTPUT CONTRACT\nReturn ONLY a raw JSON array of exactly 30 objects.\nThe FIRST character MUST be [ and the LAST character MUST be ].\nNO markdown fences, NO preamble, NO explanation, NO comments, NO trailing text.\nIf you cannot comply, return [] — never partial JSON.\n\n# ANTI-FABRICATION RULES (highest priority — violating these corrupts the pipeline)\n- NEVER invent product names. Use ONLY names present in product_catalog, verbatim.\n- NEVER invent or auto-correct URLs. cta_url must be copied verbatim from cta_links. If a link is empty, do not use it (see CTA rule).\n- NEVER invent keywords. keyword_to_use and keywords must come from keyword_collections only.\n- NEVER invent platforms. target_platform must be one of the platforms listed in input.\n- NEVER soften, paraphrase, or drop visual_restrictions. Copy them verbatim into every image_prompt.\n- If a piece of input is empty or missing, work with what exists. Do not fabricate to fill a gap.\n- Stay strictly within the brand facts provided. Do not add claims, statistics, certifications, or features not supported by the input.\n\n# PRECEDENCE (when rules conflict, higher wins)\n1. ANTI-FABRICATION RULES\n2. content_types_requested defines the allowed formats (overrides any default format mix)\n3. OUTPUT SCHEMA exactness\n4. Distribution targets (treat as \"balance as evenly as possible\", not rigid quotas)\n\n# HOW TO USE YOUR INPUT\n\nFROM content_types_requested (defines allowed formats — THIS IS THE FORMAT SOURCE OF TRUTH):\n- Map each requested type to a format value:\n  \"Carousels\" -> carousel\n  \"Post/Image\" -> post\n  \"Infographic\" -> infographic\n  \"Article\" -> article\n  \"Blogs\" -> article\n  \"Polls\" -> post\n  \"Video\" -> video\n- Use ONLY the formats that result from this mapping. Do NOT use any format the client did not request.\n- Spread the 30 days across the allowed formats as evenly as possible, weighting lighter-effort formats (post, carousel) higher than heavy formats (article, infographic, video). Posts and carousels should make up the majority.\n- If content_types_requested is empty, fall back to this default mix: post 12, carousel 8, article 4, infographic 4, video 2.\n\nFROM product_catalog:\n- Real product names. Anchor core_topic to a specific product on at least half the days (~15 of 30), using the exact name verbatim.\n- Spread products across the month; do not over-feature one product.\n- If product_catalog is empty, write topics around services/themes instead — do not invent products.\n\nFROM content_themes:\n- The 5 strategic pillars. Distribute days as evenly as possible across all themes (~6 days each).\n- Every core_topic must clearly belong to one theme.\n\nFROM brand_guidelines:\n- tone: every core_topic and cta is written in this voice register.\n- messaging: the core belief every day should reinforce.\n- values: rotate so strategic_angle reflects brand values over the month.\n- visual_style + visual_feel + brand_colors + visual_restrictions: build image_prompt (see IMAGE PROMPT RULE).\n- typography_fonts: if provided, reference it in image_prompt as \"Typography: [font]\".\n- logo_concept_keywords: weave conceptually into image_prompt to reinforce identity (e.g. \"glacier aesthetic\", \"upward momentum\"). Do not force all keywords into one prompt.\n- slogans: use as cta text or closing lines, rotated across days.\n- platforms: the ONLY allowed values for target_platform. Rotate evenly across the 30 days.\n- arabic_content: if \"Yes\" or \"Maybe\" -> arabic_required = true; if \"No\" -> arabic_required = false. Same value for all 30 days.\n- cta_links: source for cta_url (see CTA rule).\n- banner_size_requirements: if it specifies a platform/size, respect it when choosing target_platform.\n\nFROM target_audience:\n- demographics: write each core_topic for this real person (their role, region, buying context).\n- pain_points: distribute as evenly as possible so each pain point anchors ~6 days as the strategic_angle.\n- segments: rotate to ground audience specificity in core_topic.\n- interests: choose angles that resonate with what this audience reads/follows/attends.\n- income_tier: shapes authority level (Enterprise/Government -> ROI, compliance, scale, procurement).\n- b2b_type: shapes framing (Manufacturer -> supply, distribution, bulk, technical specs).\n- competitor_context: if NOT empty, create at least 4 comparison-angle days (use an aieo_terms phrase as keyword_to_use). If empty, skip comparison days entirely — do not invent competitors.\n\nFROM keyword_collections:\n- seo_keywords: distribute across the month, ~3 days per keyword, one assigned per day as keyword_to_use for post/carousel days.\n- aeo_phrases: assign to article and infographic days as keyword_to_use.\n- aieo_terms: assign to comparison-angle days as keyword_to_use.\n- keywords field: 3-5 related terms drawn from keyword_collections, as a comma-separated string.\n\n# IMAGE PROMPT RULE (mandatory — every day, exact structure)\nBuild image_prompt as a single string in this order:\n\"[Core visual concept tied to the day's product/topic]. [Subject and environment drawn from visual_style]. Feel: [visual_feel]. Typography: [typography_fonts or omit if empty]. Use brand palette: [brand_colors]. RESTRICTIONS: [visual_restrictions VERBATIM].\"\n- The RESTRICTIONS clause is mandatory and must contain visual_restrictions copied word-for-word. Never omit or soften it.\n\n# CTA RULE\n- Rotate cta_url across the days using only the NON-EMPTY values among cta_links.primary, cta_links.secondary, cta_links.tertiary.\n- If only one link exists, use it on every day. If a link is empty string, exclude it from rotation entirely.\n- cta text comes from cta_links context or slogans; cta_url is always a verbatim link.\n\n# STRATEGIC ANGLE\n- One sentence naming which pain_point or segment this day targets and the angle chosen. This is the brief Phase 3 uses to write copy. Be specific and actionable.\n\n# OUTPUT SCHEMA\nEach of the 30 objects must have EXACTLY these keys (no more, no fewer):\nday_number      : integer 1-30, sequential\nformat          : string, lowercase, one of the allowed formats from content_types_requested\ntarget_platform : string, one platform from the platforms list\ncore_topic      : string, one sentence in brand tone, anchored to a product/theme\nstrategic_angle : string, one sentence brief for Phase 3\nimage_prompt    : string, built per IMAGE PROMPT RULE\nkeywords        : string, comma-separated 3-5 terms (never an array)\nkeyword_to_use  : string, single primary keyword for the day\ncta             : string, call-to-action text\ncta_url         : string, verbatim non-empty link from cta_links\narabic_required : boolean, true or false (never a string)\ncarousel_content: object with keys slide_1 ... slide_7 when format = carousel; otherwise null\n\n# SELF-CHECK BEFORE EMITTING (fix silently, do not narrate)\n- Array has exactly 30 objects; day_number runs 1..30.\n- Every format value is one the client actually requested.\n- Every target_platform is in the platforms list.\n- Every cta_url is a verbatim non-empty link from cta_links.\n- Every image_prompt ends with the verbatim RESTRICTIONS clause.\n- carousel_content is a 7-key object only on carousel days, null everywhere else.\n- No product name, URL, keyword, or platform appears that was not in the input.\n- arabic_required is the same boolean on all 30 days.\n- Output is pure JSON: starts with [ ends with ], no fences or prose."
+            },
+            {
+              "content": "==Generate the 30-day content calendar.\n\nClient Name: {{ $json.client_name }}\n\nBRAND:\nTone: {{ $json.brand_guidelines.tone }}\nMessaging: {{ $json.brand_guidelines.messaging }}\nValues: {{ JSON.stringify($json.brand_guidelines.values) }}\nSlogans: {{ JSON.stringify($json.brand_guidelines.slogans) }}\nPlatforms: {{ $json.brand_guidelines.platforms }}\nBrand Colors: {{ $json.brand_guidelines.brand_colors }}\nVisual Style: {{ $json.brand_guidelines.visual_style }}\nVisual Feel: {{ $json.brand_guidelines.visual_feel }}\nVisual Restrictions: {{ $json.brand_guidelines.visual_restrictions }}\nArabic Content: {{ $json.brand_guidelines.arabic_content }}\nCTA Links: {{ JSON.stringify($json.brand_guidelines.cta_links) }}\nTypography Fonts: {{ $json.brand_guidelines.typography_fonts }}\nBanner Size Requirements: {{ $json.brand_guidelines.banner_size_requirements }}\nContent Types Requested: {{ $json.brand_guidelines.content_types_requested }}\nProduct Catalog: {{ JSON.stringify($json.brand_guidelines.product_catalog) }}\nContent Themes: {{ JSON.stringify($json.brand_guidelines.content_themes) }}\nLogo Concept Keywords: {{ JSON.stringify($json.brand_guidelines.logo_concept_keywords) }}\n\nAUDIENCE:\nDemographics: {{ $json.target_audience.demographics }}\nB2B Type: {{ $json.target_audience.b2b_type }}\nIncome Tier: {{ $json.target_audience.income_tier }}\nPain Points: {{ JSON.stringify($json.target_audience.pain_points) }}\nSegments: {{ JSON.stringify($json.target_audience.segments) }}\nInterests: {{ JSON.stringify($json.target_audience.interests) }}\nCompetitor Context: {{ JSON.stringify($json.target_audience.competitor_context) }}\n\nKEYWORDS:\nSEO Keywords: {{ JSON.stringify($json.keyword_collections.seo_keywords) }}\nAEO Phrases: {{ JSON.stringify($json.keyword_collections.aeo_phrases) }}\nAIEO Terms: {{ JSON.stringify($json.keyword_collections.aieo_terms) }}"
+            }
+          ]
+        },
+        "simplify": false,
+        "jsonOutput": true,
+        "builtInTools": {},
+        "options": {
+          "candidateCount": 1,
+          "temperature": 0.4,
+          "thinkingBudget": -1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        912,
+        1376
+      ],
+      "id": "428d3fcf-2ff6-4d76-8ce6-f46a71be3857",
+      "name": "AI: Generate 30-Day Content Plan",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "LMokzqlptXWbawE6",
+          "name": "content management api"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst clientId = $('Logic: Extract Input Data').first().json.client_id;\nconst clientUid = $('Logic: Extract Input Data').first().json.client_uid;\nconst clientName = $('Logic: Extract Input Data').first().json.client_name;\nconst sheetsId = $('Logic: Extract Input Data').first().json.sheets_id;\nconst driveFolderId = $('Logic: Extract Input Data').first().json.drive_folder_id;\nconst telegramId = $('Logic: Extract Input Data').first().json.telegram_id;\n\n// ── Extract raw text from all possible Gemini output shapes ──────────────────\nlet days;\n\n// Shape 1: simplify=false → candidates array\nif (input.candidates?.[0]?.content?.parts?.[0]?.text) {\n  const raw = input.candidates[0].content.parts[0].text;\n  const cleaned = raw.replace(/^```json\\s*/i,'').replace(/^```\\s*/,'').replace(/```\\s*$/,'').trim();\n  try {\n    days = JSON.parse(cleaned);\n  } catch(e) {\n    throw new Error('Parser: JSON.parse failed (Shape 1) — ' + e.message + ' | Raw: ' + raw.slice(0,300));\n  }\n}\n// Shape 2: jsonOutput=true already parsed into array directly\nelse if (Array.isArray(input)) {\n  days = input;\n}\n// Shape 3: jsonOutput=true parsed, stored under text key as array\nelse if (Array.isArray(input.text)) {\n  days = input.text;\n}\n// Shape 4: raw string in text field\nelse if (typeof input.text === 'string') {\n  const cleaned = input.text.replace(/^```json\\s*/i,'').replace(/^```\\s*/,'').replace(/```\\s*$/,'').trim();\n  try {\n    days = JSON.parse(cleaned);\n  } catch(e) {\n    throw new Error('Parser: JSON.parse failed (Shape 4) — ' + e.message + ' | Raw: ' + input.text.slice(0,300));\n  }\n}\n// Shape 5: message content blocks\nelse if (input.message?.content) {\n  const block = Array.isArray(input.message.content)\n    ? input.message.content.find(b => b.type === 'text')\n    : null;\n  const raw = block ? block.text : JSON.stringify(input.message.content);\n  const cleaned = raw.replace(/^```json\\s*/i,'').replace(/^```\\s*/,'').replace(/```\\s*$/,'').trim();\n  try {\n    days = JSON.parse(cleaned);\n  } catch(e) {\n    throw new Error('Parser: JSON.parse failed (Shape 5) — ' + e.message);\n  }\n}\nelse {\n  throw new Error('Parser: Cannot find array in Gemini output. Keys found: ' + JSON.stringify(Object.keys(input)));\n}\n\n// ── Validate ─────────────────────────────────────────────────────────────────\nif (!Array.isArray(days)) {\n  throw new Error('Parser: Expected array, got ' + typeof days);\n}\nif (days.length !== 30) {\n  throw new Error('Parser: Expected 30 items, got ' + days.length);\n}\n\n// ── Map to output rows ────────────────────────────────────────────────────────\nconst today = new Date();\n\nreturn days.map((day, i) => {\n  const postingDate = new Date(today);\n  postingDate.setDate(today.getDate() + i);\n  const dateStr = postingDate.toISOString().split('T')[0];\n\n  const isCarousel = (day.format || '').toLowerCase() === 'carousel';\n  const carouselObj = isCarousel && day.carousel_content ? day.carousel_content : null;\n\n  return {\n    json: {\n      // ── Identity ────────────────────────────────────────────────────────────\n      client_id:        clientId,\n      client_uid:       clientUid,\n      client_name:      clientName,\n      sheets_id:        sheetsId,\n      drive_folder_id:  driveFolderId,\n      telegram_id:      telegramId,\n\n      // ── Planning fields ─────────────────────────────────────────────────────\n      day_number:       day.day_number      ?? (i + 1),\n      format:           (day.format         || 'post').toLowerCase(),\n      posting_date:     dateStr,\n      target_platform:  day.target_platform || '',\n      core_topic:       day.core_topic      || '',\n      strategic_angle:  day.strategic_angle || '',\n      image_prompt:     day.image_prompt    || '',\n      keywords:         Array.isArray(day.keywords) ? day.keywords.join(', ') : (day.keywords || ''),\n      keyword_to_use:   day.keyword_to_use  || '',\n      cta:              day.cta             || '',\n      cta_url:          day.cta_url         || '',\n      arabic_required:  day.arabic_required === true,\n      carousel_content: carouselObj || null,\n\n      // ── Supabase row ────────────────────────────────────────────────────────\n      supabase_row: {\n        client_id:        clientId,\n        day_number:       day.day_number      ?? (i + 1),\n        format:           (day.format         || 'post').toLowerCase(),\n        posting_date:     dateStr,\n        target_platform:  day.target_platform || '',\n        core_topic:       day.core_topic      || '',\n        strategic_angle:  day.strategic_angle || '',\n        image_prompt:     day.image_prompt    || '',\n        keywords:         Array.isArray(day.keywords) ? day.keywords.join(', ') : (day.keywords || ''),\n        keyword_to_use:   day.keyword_to_use  || '',\n        cta:              day.cta             || '',\n        cta_url:          day.cta_url         || '',\n        arabic_required:  day.arabic_required === true,\n        carousel_content: carouselObj         || null,\n        status:           'Draft',\n        author:           'AI Agent',\n        created_at:       new Date().toISOString()\n      },\n\n      // ── Sheet row ───────────────────────────────────────────────────────────\n      sheet_row: {\n        'Day Number':            day.day_number      ?? (i + 1),\n        'Format':                (day.format         || 'post').toLowerCase(),\n        'Posting Date':          dateStr,\n        'Target Platform':       day.target_platform || '',\n        'Core Service / Topic':  day.core_topic      || '',\n        'Strategic Angle':       day.strategic_angle || '',\n        'Image Description':     day.image_prompt    || '',\n        'Keyword To Use':        day.keyword_to_use  || '',\n        'SEO AEO AIEO Keywords': Array.isArray(day.keywords) ? day.keywords.join(', ') : (day.keywords || ''),\n        'CTA':                   day.cta             || '',\n        'CTA URL':               day.cta_url         || '',\n        'Arabic Required':       day.arabic_required === true ? 'Yes' : 'No',\n        'Slide 1':               isCarousel ? (carouselObj?.slide_1 || '') : '',\n        'Slide 2':               isCarousel ? (carouselObj?.slide_2 || '') : '',\n        'Slide 3':               isCarousel ? (carouselObj?.slide_3 || '') : '',\n        'Slide 4':               isCarousel ? (carouselObj?.slide_4 || '') : '',\n        'Slide 5':               isCarousel ? (carouselObj?.slide_5 || '') : '',\n        'Slide 6':               isCarousel ? (carouselObj?.slide_6 || '') : '',\n        'Slide 7':               isCarousel ? (carouselObj?.slide_7 || '') : '',\n        'Done By':               'AI Agent',\n        'Status':                'Draft',\n        'Output Assets':         '',\n        'Comment':               '',\n        'Post Copy':             '',\n        'Hashtags':              '',\n        'Live Links':            ''\n      }\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1264,
+        1376
+      ],
+      "id": "3167b4f5-c447-4c92-bfd2-4c2d184c3823",
+      "name": "Parser: Process AI Calendar Output"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0ce36d2f-a02a-42d4-a23a-0a56449a8eb8",
+              "name": "client_id",
+              "value": "={{ $json.client_id }}",
+              "type": "string"
+            },
+            {
+              "id": "389f01bc-895a-4d5e-ba41-b12a716966d6",
+              "name": "client_name",
+              "value": "={{ $json.client_name }}",
+              "type": "string"
+            },
+            {
+              "id": "1684c5ba-a13a-408c-addf-e254baa369e4",
+              "name": "telegram_id",
+              "value": "={{ $json.telegram_id }}",
+              "type": "number"
+            },
+            {
+              "id": "9b4c2daf-9428-48c0-ba26-71280c13c9fd",
+              "name": "brand_guidelines",
+              "value": "={{ $json.brand_guidelines }}",
+              "type": "object"
+            },
+            {
+              "id": "d04ad82b-8882-423d-b295-51707acb4e7a",
+              "name": "target_audience",
+              "value": "={{ $json.target_audience }}",
+              "type": "object"
+            },
+            {
+              "id": "b2b3920e-7710-479a-91dc-aab48482c278",
+              "name": "keyword_collections",
+              "value": "={{ $json.keyword_collections }}",
+              "type": "object"
+            },
+            {
+              "id": "298f79a1-5ec9-4741-b7da-e1b9790bf5a1",
+              "name": "sheets_id",
+              "value": "={{ $json.sheets_id }}",
+              "type": "string"
+            },
+            {
+              "id": "41e2c005-6131-4679-892f-4e3398c81ce5",
+              "name": "drive_folder_id",
+              "value": "={{ $json.drive_folder_id }}",
+              "type": "string"
+            },
+            {
+              "id": "0b88787e-3ed6-41eb-a923-3b78083c4beb",
+              "name": "client_uid",
+              "value": "={{ $json.client_uid }}",
+              "type": "string"
+            },
+            {
+              "id": "2e2e8e4a-f450-4c96-8cdd-c27e9aafb48d",
+              "name": "product_catalog",
+              "value": "={{ $json.brand_guidelines.product_catalog }}",
+              "type": "array"
+            },
+            {
+              "id": "df92a15d-458b-43c0-b741-246b17f4b1ad",
+              "name": "content_themes",
+              "value": "={{ $json.brand_guidelines.content_themes }}",
+              "type": "array"
+            },
+            {
+              "id": "568d0129-9b01-485f-90b5-b1302e0ff130",
+              "name": "logo_concept_keywords",
+              "value": "={{ $json.brand_guidelines.logo_concept_keywords }}",
+              "type": "array"
+            },
+            {
+              "id": "65b734f6-b1c1-4dc2-a2ba-9deeede31f91",
+              "name": "competitor_context",
+              "value": "={{ $json.competitor_context }}",
+              "type": "array"
+            },
+            {
+              "id": "e03e70ba-cde3-4a67-a9f2-5bb67f39bda9",
+              "name": "typography_fonts",
+              "value": "={{ $json.typography_fonts }}",
+              "type": "string"
+            },
+            {
+              "id": "324ae4f9-939b-4b16-a724-c2fcbcb2b420",
+              "name": "banner_size_requirements",
+              "value": "={{ $json.banner_size_requirements }}",
+              "type": "string"
+            },
+            {
+              "id": "f95e06f2-9482-4d24-b39c-5f7cdda47b8d",
+              "name": "content_types_requested",
+              "value": "={{ $json.content_types_requested }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        320,
+        1376
+      ],
+      "id": "278a1fa9-c404-4c4f-8ad0-8bff23ebcbdf",
+      "name": "Logic: Extract Input Data"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "all_rows",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1712,
+        1472
+      ],
+      "id": "cc7234c9-58fa-495c-aacf-508c680f520b",
+      "name": "Aggregate: Combine Calendar Rows"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst clientId = $('Logic: Extract Input Data').first().json.client_id;\nconst sheetsId = $('Logic: Extract Input Data').first().json.sheets_id;\nconst telegramId = $('Logic: Extract Input Data').first().json.telegram_id;\nconst clientName = $('Logic: Extract Input Data').first().json.client_name;\n\nconst input = $input.first().json;\nconst rows = Array.isArray(input.all_rows) ? input.all_rows : [input];\n\nlet doc = '30-DAY CONTENT CALENDAR\\n========================\\n\\n';\ndoc += `Client: ${clientName}\\n`;\ndoc += `Generated: ${new Date().toISOString().split('T')[0]}\\n\\n`;\n\nrows.forEach(row => {\n  const day     = row.day_number ?? '?';\n  const fmt     = (row.format ?? 'unknown').toUpperCase();\n  const date    = row.posting_date ?? '';\n  const plat    = row.target_platform ?? '';\n  const topic   = row.core_topic ?? '';\n  const angle   = row.strategic_angle ?? '';\n  const kw      = row.keyword_to_use ?? '';\n  const cta     = row.cta ?? '';\n  const ctaUrl  = row.cta_url ?? '';\n  const arabic  = row.arabic_required ? 'YES' : 'No';\n  const imgP    = row.image_prompt ?? '';\n\n  doc += `DAY ${day} — ${fmt} | ${plat}\\n`;\n  doc += `Date: ${date}\\n`;\n  doc += `Topic: ${topic}\\n`;\n  doc += `Strategic Angle: ${angle}\\n`;\n  doc += `Keyword: ${kw}\\n`;\n  doc += `CTA: ${cta}\\n`;\n  doc += `CTA URL: ${ctaUrl}\\n`;\n  doc += `Arabic Version: ${arabic}\\n`;\n  doc += `Image Prompt: ${imgP}\\n`;\n\n  if (fmt === 'CAROUSEL' && row.carousel_content) {\n    let cc = row.carousel_content;\n    if (typeof cc === 'string') { try { cc = JSON.parse(cc); } catch(e) {} }\n    doc += `Carousel Slides:\\n`;\n    for (let i = 1; i <= 7; i++) {\n      const s = cc[`slide_${i}`];\n      if (s) doc += `  Slide ${i}: ${s}\\n`;\n    }\n  }\n  doc += '\\n---\\n\\n';\n});\n\nreturn [{ json: { document_text: doc, client_id: clientId, sheets_id: sheetsId, telegram_id: telegramId } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        1472
+      ],
+      "id": "93bc26a4-56ce-4630-a9dc-36ba0f507f70",
+      "name": "Logic: Format Document Text"
+    },
+    {
+      "parameters": {
+        "folderId": "default",
+        "title": "={{ $('Logic: Extract Input Data').item.json.client_uid }} - {{ $('Logic: Extract Input Data').item.json.client_name }} - 30-Day Content Plan"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2288,
+        1472
+      ],
+      "id": "c755da24-f836-4b1f-a198-e424c031532b",
+      "name": "Docs: Create Approval Document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "joKfPltQhMHSEGAG",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $('Logic: Format Document Text').item.json.document_text }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2720,
+        1472
+      ],
+      "id": "a88abe7f-a8bb-44e9-9f53-bd154ee26a87",
+      "name": "Docs: Insert Content into Document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "joKfPltQhMHSEGAG",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "Content_Calendar",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "client_id",
+              "fieldValue": "={{ $json.supabase_row.client_id }}"
+            },
+            {
+              "fieldId": "day_number",
+              "fieldValue": "={{ $json.supabase_row.day_number }}"
+            },
+            {
+              "fieldId": "format",
+              "fieldValue": "={{ $json.supabase_row.format }}"
+            },
+            {
+              "fieldId": "posting_date",
+              "fieldValue": "={{ $json.supabase_row.posting_date }}"
+            },
+            {
+              "fieldId": "target_platform",
+              "fieldValue": "={{ $json.target_platform }}"
+            },
+            {
+              "fieldId": "core_topic",
+              "fieldValue": "={{ $json.supabase_row.core_topic }}"
+            },
+            {
+              "fieldId": "strategic_angle",
+              "fieldValue": "={{ $json.supabase_row.strategic_angle }}"
+            },
+            {
+              "fieldId": "image_prompt",
+              "fieldValue": "={{ $json.supabase_row.image_prompt }}"
+            },
+            {
+              "fieldId": "keywords",
+              "fieldValue": "={{ $json.supabase_row.keywords }}"
+            },
+            {
+              "fieldId": "keyword_to_use",
+              "fieldValue": "={{ $json.supabase_row.keyword_to_use }}"
+            },
+            {
+              "fieldId": "cta",
+              "fieldValue": "={{ $json.supabase_row.cta }}"
+            },
+            {
+              "fieldId": "cta_url",
+              "fieldValue": "={{ $json.supabase_row.cta_url }}"
+            },
+            {
+              "fieldId": "arabic_required",
+              "fieldValue": "={{ $json.supabase_row.arabic_required }}"
+            },
+            {
+              "fieldId": "carousel_content",
+              "fieldValue": "={{ $json.supabase_row.carousel_content }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.supabase_row.status }}"
+            },
+            {
+              "fieldId": "author",
+              "fieldValue": "={{ $json.supabase_row.author }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $json.supabase_row.created_at }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1488,
+        1376
+      ],
+      "id": "9f48a88b-ab26-42fc-b990-caca3da487d9",
+      "name": "DB: Save Content Calendar Rows",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Logic: Extract Input Data').item.json.telegram_id }}",
+        "text": "==📋 30-Day Content Plan Ready\n\nClient: {{ $('Logic: Extract Input Data').first().json.client_name }}\n\nReview the plan here:\nhttps://docs.google.com/document/d/{{ $('Docs: Insert Content into Document').item.json.documentId }}/edit\n\nPlease review and approve or request revision below.",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "✅ Approve Plan",
+                    "additionalFields": {
+                      "callback_data": "=APPROVE|{{ $('Logic: Format Document Text').item.json.client_id }}"
+                    }
+                  },
+                  {
+                    "text": "✏️ Request Revision",
+                    "additionalFields": {
+                      "callback_data": "=REVISE|{{ $('Logic: Format Document Text').item.json.client_id }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2944,
+        1472
+      ],
+      "id": "6e2928d4-18c3-4876-989e-55c1dda1c260",
+      "name": "Telegram: Send Approval Request",
+      "webhookId": "db6b6a6d-ac9d-46eb-8569-f77f6de1aa4f",
+      "credentials": {
+        "telegramApi": {
+          "id": "Gg4nrOPfTddNGNV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Clients",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Logic: Extract Input Data').item.json.client_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "doc_url",
+              "fieldValue": "={{ 'https://docs.google.com/document/d/' + $('Docs: Insert Content into Document').item.json.documentId + '/edit' }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "Pending_Approval"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3168,
+        1472
+      ],
+      "id": "e8cb1c13-ef1b-46e8-8801-e4e990c704f8",
+      "name": "DB: Save Document URL to Client",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4534dcfd-1f4c-4f40-9e8e-7e7af6d12f8e",
+              "name": "Day Number",
+              "value": "={{ $json.day_number }}",
+              "type": "string"
+            },
+            {
+              "id": "4fbd780b-bcf4-485b-a434-e011dd8f10fe",
+              "name": "Format",
+              "value": "={{ $json.format }}",
+              "type": "string"
+            },
+            {
+              "id": "b086cd4a-581f-4c5e-b391-249982bd76ad",
+              "name": "Core Topic",
+              "value": "={{ $json.core_topic }}",
+              "type": "string"
+            },
+            {
+              "id": "2c548aed-601e-46f5-981e-ae1a26fb725c",
+              "name": "Image Description",
+              "value": "={{ $json.image_prompt }}",
+              "type": "string"
+            },
+            {
+              "id": "5e99e539-4191-4be3-9c41-0ab84746560c",
+              "name": "Keywords",
+              "value": "={{ $json.keywords }}",
+              "type": "string"
+            },
+            {
+              "id": "01a1b54c-f6b0-4851-aa8b-97a9bb7d269b",
+              "name": "CTA",
+              "value": "={{ $json.cta }}",
+              "type": "string"
+            },
+            {
+              "id": "365bf731-0308-4c4f-ae2a-068097a20695",
+              "name": "Status",
+              "value": "={{ $json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "ee9c2ae0-19fe-4a1e-8744-b97fe250ac2b",
+              "name": "Posting Date",
+              "value": "={{ $json.posting_date }}",
+              "type": "string"
+            },
+            {
+              "id": "0ab9a6ca-099a-4c59-b059-f9ed47028889",
+              "name": "Slide 1",
+              "value": "={{ $json.carousel_content?.slide_1 ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "0de130c6-6a97-44d7-a293-f714827b15bf",
+              "name": "Slide 2",
+              "value": "={{ $json.carousel_content?.slide_2 ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "6f0c13d5-3c5c-4046-85ec-90778aba3e33",
+              "name": "Slide 3",
+              "value": "={{ $json.carousel_content?.slide_3 ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "be5ceab8-39ab-430d-aba7-8c287cfee52e",
+              "name": "Slide 4",
+              "value": "={{ $json.carousel_content?.slide_4 ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "80025f85-d1c5-4235-b9e1-13501be241fa",
+              "name": "Slide 5",
+              "value": "={{ $json.carousel_content?.slide_5 ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "feba3b61-d06a-40a5-8dd9-9b77daab1323",
+              "name": "Slide 6",
+              "value": "={{ $json.carousel_content?.slide_6 ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "d17fa434-016a-4cee-a103-b5ea2d191f86",
+              "name": "Slide 7",
+              "value": "={{ $json.carousel_content?.slide_7 ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "0ad0e432-f469-47ba-90cd-82910bcb4af1",
+              "name": "Done By",
+              "value": "AI Agent",
+              "type": "string"
+            },
+            {
+              "id": "d48e25dc-387d-42c7-9da1-1f39890ef364",
+              "name": "Post Copy",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "f31cd170-0e9b-4463-bc59-bd4e57f6330f",
+              "name": "Hashtags",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "5ab964ce-aede-4439-864b-3658dcf8605e",
+              "name": "Output Assets",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "5ed15d20-e939-46bd-ba45-cc1abcac8ac4",
+              "name": "Comment",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "dc35e7d5-0980-4c4a-ab68-022acd1371ff",
+              "name": "Live Links",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "ebfe1b34-cbb2-4a07-b108-02126e837a79",
+              "name": "Target Platform",
+              "value": "={{ $json.target_platform }}",
+              "type": "string"
+            },
+            {
+              "id": "99e1fd75-8807-41d0-83a5-6600b5691a1b",
+              "name": "strategic_angle",
+              "value": "={{ $json.strategic_angle }}",
+              "type": "string"
+            },
+            {
+              "id": "9a358e7f-df75-42f8-8514-7ade362ba243",
+              "name": "keyword_to_use",
+              "value": "={{ $json.keyword_to_use }}",
+              "type": "string"
+            },
+            {
+              "id": "138d01d0-5dc2-4c88-a9c6-c788a8aee003",
+              "name": "cta_url",
+              "value": "={{ $json.cta_url }}",
+              "type": "string"
+            },
+            {
+              "id": "c5354e14-4dfa-452c-b1f1-e9bf2a41cd34",
+              "name": "arabic_required",
+              "value": "={{ $json.arabic_required }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1648,
+        1280
+      ],
+      "id": "8ccb15c3-158e-4711-826c-a4a6429e9e2a",
+      "name": "Set: Map to Sheet Headers"
+    },
+    {
+      "parameters": {
+        "content": "## 📝 PHASE 2: CONTENT PLANNING & STRATEGY GENERATOR\n\n### 📌 OVERVIEW\nAutomated generation engine triggered by the **Phase 1 Workspace Handoff** via the `Execute Workflow Trigger`. Processes raw extracted brand strategy objects, dynamically generates an optimized 30-day cross-platform content grid, runs database/sheet synchronization loops, and handles client approval handoffs.\n\n---\n\n### 🗺️ ARCHITECTURAL FLOW & BLOCKS\n\n#### 🧠 1. Strategic Content Generation\n- **Intake:** Normalizes structured inputs via `Extract Input Data` node (`brand_guidelines`, `target_audience`, `keyword_collections`).\n- **AI Engine:** Pipes normalized strings to **Google Gemini (2.5 Flash)** with a strict 30-day output schema constraint.\n- **Enforced Formats:** Programmatically generates multi-format distributions: `post`, `carousel`, `article`, `infographic`, `video`.\n\n#### 🔀 2. Array Parsing & UAE Temporal Calibration\n- `Parser: Process AI Calendar Output` node cleans raw text wrappers (removes markdown backticks/json code fences).\n- Normalizes output data schemas into n8n relational objects.\n- Calibrates timestamps to standard **UAE Local Time (UTC+4)** to programmatically pre-schedule the 30-day deployment dates.\n\n#### 🗄️ 3. Relational Persistence & Spreadsheet Sync\n- Splits the parent execution thread into concurrent data-writing micro-tasks:\n  • **Supabase Node:** Maps snake_case relational tables to save each calendar day (`Draft` status, `revision_flagged: false`).\n  • **Google Sheets Node:** Maps the nested `carousel_content` directly to individual header columns (`Slide 1` through `Slide 7`) inside the target spreadsheet workspace.\n\n#### 📄 4. Collaborative Asset Compilation\n- `Aggregate Node` captures the individual looping records and compiles them into a unified memory block.\n- **Google Docs Node:** Spawns a dedicated file instance titled with the client's name and programmatically injects the raw text content to form a review document.\n\n#### 🚀 5. Telegram Review Handoff & State Finalization\n- **Telegram Node:** Transmits an interactive layout directly to the administrator's account containing a link to the generated review sheet.\n- Embeds encrypted data callback fields (`APPROVE|client_id` or `REVISE|client_id`) within the interactive keyboard arrays.\n- **Final Update:** Commits the workspace link back to Supabase and locks the parent account profile into a `Pending_Approval` status.",
+        "height": 1648,
+        "width": 3364,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        288,
+        -992
+      ],
+      "id": "febe2738-a50c-42a6-ba2d-39246947e984",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('Logic: Extract Input Data').item.json.drive_folder_id }}",
+          "mode": "id"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2496,
+        1472
+      ],
+      "id": "c29a4fbe-c39b-4905-85d2-c25539f5fe88",
+      "name": "Moving the Google Doc into Client Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "sbINNLBW9tFyLYX1",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "11f20357-db89-4d87-a2f1-397569fbaebb",
+              "leftValue": "={{ $json.client_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "427ab455-408a-42ed-b13b-62e36621894e",
+              "leftValue": "={{ $json.client_name }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "154c7612-739c-4bc3-98aa-8a70462df5c2",
+              "leftValue": "={{ $json.brand_guidelines }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "ab6d848c-eb16-44f7-93be-35d558ce8aa2",
+              "leftValue": "={{ $json.target_audience }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "57d01349-1c03-4cf5-a2fa-91e8c9b06a7f",
+              "leftValue": "={{ $json.sheets_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "8b928142-7c19-411a-9a19-935248f097b7",
+              "leftValue": "={{ $json.client_uid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "803569df-bd66-480d-bf0c-b5a0e7db726d",
+              "leftValue": "={{ $json.drive_folder_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        560,
+        1376
+      ],
+      "id": "aec1db16-75fd-48f2-b3b8-101e0a474a63",
+      "name": "Validate: Required Client Data"
+    },
+    {
+      "parameters": {
+        "errorMessage": "=⚠️ Phase 2A Aborted — Missing Client Data  🆔 Client ID: {{ $json.client_id \n\n 'MISSING' }} 🏢 Client Name: {{ $json.client_name \n\n 'MISSING' }} 📋 Brand Guidelines: {{ $json.brand_guidelines ? '✅ Present' : '❌ MISSING' }} 👥 Target Audience: {{ $json.target_audience ? '✅ Present' : '❌ MISSING' }} 📊 Sheets ID: {{ $json.sheets_id \n\n 'MISSING' }}  Action: Check Supabase Clients table for this client and re-trigger Phase 1."
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1024,
+        1616
+      ],
+      "id": "7a7ec24b-f8f7-41a2-a8c0-80be038ec598",
+      "name": "Stop and Error"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Logic: Extract Input Data').item.json.telegram_id }}",
+        "text": "=⚠️ Phase 2A Aborted — Missing Client Data  🆔 Client ID: {{ $json.client_id \n\n 'MISSING' }} 🏢 Client Name: {{ $json.client_name \n\n 'MISSING' }} 📋 Brand Guidelines: {{ $json.brand_guidelines ? '✅ Present' : '❌ MISSING' }} 👥 Target Audience: {{ $json.target_audience ? '✅ Present' : '❌ MISSING' }} 📊 Sheets ID: {{ $json.sheets_id \n\n 'MISSING' }}  Action: Check Supabase Clients table for this client and re-trigger Phase 1.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        784,
+        1616
+      ],
+      "id": "7e04338f-ef89-4ab9-9fe4-9393e3398a3b",
+      "name": "Missing Client Data Message",
+      "webhookId": "e34a9115-ed02-45b9-8318-ef722dc4bf0c",
+      "credentials": {
+        "telegramApi": {
+          "id": "Gg4nrOPfTddNGNV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('Logic: Extract Input Data').item.json.sheets_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Content Calendar",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Target Platform": "={{ $json['Target Platform'] }}",
+            "strategic_angle": "={{ $json.strategic_angle }}",
+            "keyword_to_use": "={{ $json.keyword_to_use }}",
+            "cta_url": "={{ $json.cta_url }}",
+            "arabic_required": "={{ $json.arabic_required }}",
+            "Done By": "AI Agent",
+            "Slide 7": "={{ $json['Slide 7'] }}",
+            "Slide 6": "={{ $json['Slide 6'] }}",
+            "Slide 5": "={{ $json['Slide 5'] }}",
+            "Slide 4": "={{ $json['Slide 4'] }}",
+            "Slide 3": "={{ $json['Slide 3'] }}",
+            "Slide 2": "={{ $json['Slide 2'] }}",
+            "Slide 1": "={{ $json['Slide 1'] }}",
+            "Posting Date": "={{ $json['Posting Date'] }}",
+            "Status": "={{ $json.Status }}",
+            "CTA": "={{ $json.CTA }}",
+            "Keywords": "={{ $json.Keywords }}",
+            "Image Description": "={{ $json['Image Description'] }}",
+            "Core Topic": "={{ $json['Core Topic'] }}",
+            "Format": "={{ $json.Format }}",
+            "Day Number": "={{ $json['Day Number'] }}"
+          },
+          "matchingColumns": [
+            "Day Number"
+          ],
+          "schema": [
+            {
+              "id": "Day Number",
+              "displayName": "Day Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Format",
+              "displayName": "Format",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Core Topic",
+              "displayName": "Core Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Image Description",
+              "displayName": "Image Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Keywords",
+              "displayName": "Keywords",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "CTA",
+              "displayName": "CTA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Posting Date",
+              "displayName": "Posting Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 1",
+              "displayName": "Slide 1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 2",
+              "displayName": "Slide 2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 3",
+              "displayName": "Slide 3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 4",
+              "displayName": "Slide 4",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 5",
+              "displayName": "Slide 5",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 6",
+              "displayName": "Slide 6",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 7",
+              "displayName": "Slide 7",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Done By",
+              "displayName": "Done By",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Post Copy",
+              "displayName": "Post Copy",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Hashtags",
+              "displayName": "Hashtags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Output Assets",
+              "displayName": "Output Assets",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Comment",
+              "displayName": "Comment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Live Links",
+              "displayName": "Live Links",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Target Platform",
+              "displayName": "Target Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "strategic_angle",
+              "displayName": "strategic_angle",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "keyword_to_use",
+              "displayName": "keyword_to_use",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "cta_url",
+              "displayName": "cta_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "arabic_required",
+              "displayName": "arabic_required",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "locationDefine": {
+            "values": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1824,
+        1280
+      ],
+      "id": "f3423a4f-b745-4c93-b146-1ff56717bfaa",
+      "name": "Sheets: Append Content Calendar Rows",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "cxrImtgrJYgfX5Xt",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Trigger: Start Phase 2": [
+      {
+        "json": {
+          "telegram_id": 8244436566,
+          "client_id": "2c02a7d1-6cb4-4508-b41c-2116a75fa95e",
+          "client_name": "Gletscher Energy",
+          "brand_guidelines": {
+            "tone": "Professional and formal, yet informative and educational, positioning the brand as a reliable authority in renewable energy.",
+            "values": [
+              "Preservation",
+              "Innovation",
+              "Development",
+              "Reliability",
+              "Sustainability"
+            ],
+            "slogans": [
+              "Empowering Tomorrow, Preserving Today.",
+              "Powering Possibility Across Every Sector"
+            ],
+            "cta_links": {
+              "primary": "https://www.gletscherenergy.com/pages/contact?contact_posted=true#ContactForm",
+              "tertiary": "https://wa.me/971589026788",
+              "secondary": "https://www.linkedin.com/company/gletscherenergy/"
+            },
+            "messaging": "Gletscher Energy is the reliable, future-focused energy partner for organizations transitioning to sustainable infrastructure, offering innovative solutions from Makellos solar panels to Camper portable power stations.",
+            "platforms": "Facebook, Instagram, LinkedIn, Pinterest",
+            "visual_feel": "Photo-heavy and Realistic",
+            "brand_colors": "#343B43, #656C74, #F0EDE8, #F18C00, #000000",
+            "visual_style": "Clean, modern, and technological with a structured grid system, utilizing a cool blue and vibrant orange palette alongside photo-heavy, realistic imagery that combines vast natural landscapes with professional product photography.",
+            "arabic_content": "No",
+            "content_themes": [
+              "Renewable Energy & Solar Infrastructure",
+              "Portable Power & Mobile Energy Storage",
+              "Smart Outdoor Lighting Solutions",
+              "High-Efficiency Device Charging",
+              "Sustainable Development & Future-Focused Energy"
+            ],
+            "product_catalog": [
+              "Makellos Lite Solar Panels",
+              "Stellar Solar Streetlight",
+              "Lume Z Power Pods",
+              "Camper Pico Power Bank",
+              "Camper PRO Portable Power Station",
+              "Pulsar GaN Charger",
+              "MOBILE ENERGY STORAGE",
+              "SOLAR ENERGY"
+            ],
+            "typography_fonts": "Lato",
+            "visual_restrictions": "Make sure contents will not conflict with government policies and values. For example, no words related to war, no pictures of real cities or buildings. In the selection of logo color versions, color drafts are preferred. If color drafts cannot be used, then ink drafts and reverse drafts of the logo should be utilized. The Chinese and English fonts for the brand... should not have their spacing altered arbitrarily. They should not be replaced with other fonts without proper consideration. Using the logo below its minimum size may impair its recognizability.",
+            "logo_concept_keywords": [
+              "Glacier",
+              "upward arrow",
+              "energy",
+              "unity",
+              "innovation",
+              "technology",
+              "intelligence"
+            ],
+            "content_types_requested": "Carousels, Post/Image, Infographic, Article",
+            "banner_size_requirements": "Please follow this brand's guideline: https://www.instagram.com/p/DXKI6frEuuB/?igsh=eWpkNGF5NmdsZnJs"
+          },
+          "target_audience": {
+            "b2b_type": "Manufacturer",
+            "segments": [
+              "Middle East Solar System Integrators",
+              "African Off-Grid Project Developers",
+              "Commercial Infrastructure Procurement Teams",
+              "Industrial Mobile Energy Distributors",
+              "Government Smart City Planners"
+            ],
+            "interests": [
+              "Renewable Energy Infrastructure",
+              "Off-Grid Power Solutions",
+              "Smart City Development",
+              "Energy Storage Innovations",
+              "Sustainable Supply Chain Management"
+            ],
+            "income_tier": "Mid-Market & Enterprise",
+            "pain_points": [
+              "Unreliable grid power requiring heavy-duty off-grid backup solutions",
+              "Dust accumulation reducing solar street light efficiency in Middle East environments",
+              "Lack of durable, high-capacity portable power for industrial field work",
+              "Inefficient multi-device charging for mobile professional teams",
+              "Sourcing reliable, enterprise-grade solar panels for large-scale projects"
+            ],
+            "demographics": "System integrators and distributors operating across the Middle East and Africa, primarily B2B procurement leads and technical decision-makers responsible for evaluating renewable energy infrastructure.",
+            "competitor_context": []
+          },
+          "keyword_collections": {
+            "aieo_terms": [
+              "Compare Gletscher Camper PRO vs competitor portable power stations for industrial use",
+              "Gletscher Makellos Lite solar panels reviews 2026",
+              "Top self-cleaning solar street lights for Middle East infrastructure",
+              "Best alternative to traditional grid power for African off-grid projects",
+              "Gletscher Pulsar 140W GaN charger pricing comparison UAE",
+              "Enterprise mobile energy storage solutions evaluation",
+              "Top N-type TOPCon solar panels for commercial integrators",
+              "Gletscher Stellar solar street light performance in dusty climates",
+              "Best high-capacity power banks for field professionals",
+              "Compare Gletscher Lume Z power pods vs standard enterprise chargers"
+            ],
+            "aeo_phrases": [
+              "What is the best portable power station for industrial use in the Middle East?",
+              "How do I choose a solar street light for dusty environments?",
+              "Where can I bulk order 140W GaN chargers in the UAE?",
+              "Why is self-cleaning solar technology important for GCC infrastructure?",
+              "What are the top high-efficiency solar panels for commercial projects in Africa?",
+              "How does the Camper PRO power station perform in off-grid environments?",
+              "Where can I find reliable mobile energy storage distributors in Dubai?",
+              "What is the best multi-port fast charger for enterprise teams?",
+              "How do I size a solar battery storage system for a warehouse?",
+              "Why should system integrators choose N-type TOPCon solar panels?"
+            ],
+            "seo_keywords": [
+              "buy Makellos solar panels Middle East",
+              "Stellar solar street light distributor Africa",
+              "Camper PRO portable power station UAE",
+              "Pulsar 140W GaN charger bulk order",
+              "Lume transparent powerbank supplier",
+              "how to choose off-grid solar backup power",
+              "best portable power station for industrial use",
+              "self-cleaning solar street lights for dusty environments",
+              "enterprise renewable energy solutions GCC",
+              "high-efficiency monocrystalline solar panels Africa"
+            ]
+          },
+          "sheets_id": "16qGA0WxiPcjv2GBLJzXefp5Rh1_cnSjmLN3mgopl_0c",
+          "drive_folder_id": "16u9GMMVjfVDzQwvdv0FjP0Qp0jJVliHK",
+          "client_uid": "CLT-2026-0001",
+          "product_catalog": [
+            "Makellos Lite Solar Panels",
+            "Stellar Solar Streetlight",
+            "Lume Z Power Pods",
+            "Camper Pico Power Bank",
+            "Camper PRO Portable Power Station",
+            "Pulsar GaN Charger",
+            "MOBILE ENERGY STORAGE",
+            "SOLAR ENERGY"
+          ],
+          "content_themes": [
+            "Renewable Energy & Solar Infrastructure",
+            "Portable Power & Mobile Energy Storage",
+            "Smart Outdoor Lighting Solutions",
+            "High-Efficiency Device Charging",
+            "Sustainable Development & Future-Focused Energy"
+          ],
+          "logo_concept_keywords": [
+            "Glacier",
+            "upward arrow",
+            "energy",
+            "unity",
+            "innovation",
+            "technology",
+            "intelligence"
+          ],
+          "competitor_context": [],
+          "typography_fonts": "Lato",
+          "banner_size_requirements": "Please follow this brand's guideline: https://www.instagram.com/p/DXKI6frEuuB/?igsh=eWpkNGF5NmdsZnJs",
+          "content_types_requested": "Carousels, Post/Image, Infographic, Article"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Trigger: Start Phase 2": {
+      "main": [
+        [
+          {
+            "node": "Logic: Extract Input Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI: Generate 30-Day Content Plan": {
+      "main": [
+        [
+          {
+            "node": "Parser: Process AI Calendar Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram: Send Approval Request": {
+      "main": [
+        [
+          {
+            "node": "DB: Save Document URL to Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Docs: Insert Content into Document": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Send Approval Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Docs: Create Approval Document": {
+      "main": [
+        [
+          {
+            "node": "Moving the Google Doc into Client Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logic: Format Document Text": {
+      "main": [
+        [
+          {
+            "node": "Docs: Create Approval Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logic: Extract Input Data": {
+      "main": [
+        [
+          {
+            "node": "Validate: Required Client Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser: Process AI Calendar Output": {
+      "main": [
+        [
+          {
+            "node": "DB: Save Content Calendar Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Save Content Calendar Rows": {
+      "main": [
+        [
+          {
+            "node": "Aggregate: Combine Calendar Rows",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Set: Map to Sheet Headers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate: Combine Calendar Rows": {
+      "main": [
+        [
+          {
+            "node": "Logic: Format Document Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set: Map to Sheet Headers": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Append Content Calendar Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Moving the Google Doc into Client Drive": {
+      "main": [
+        [
+          {
+            "node": "Docs: Insert Content into Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate: Required Client Data": {
+      "main": [
+        [
+          {
+            "node": "AI: Generate 30-Day Content Plan",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Missing Client Data Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Missing Client Data Message": {
+      "main": [
+        [
+          {
+            "node": "Stop and Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "5fb99e27-3d39-455f-8e5b-45188ae68268",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "27691624a7c7d2a9124a20717f3db6f18f26825f3de4bc41f1be750963b9ae26"
+  },
+  "id": "kcjfKx5KPB0oFVcH",
+  "tags": []
+}

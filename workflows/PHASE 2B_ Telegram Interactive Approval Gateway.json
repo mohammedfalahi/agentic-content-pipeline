@@ -1,0 +1,1058 @@
+{
+  "name": "PHASE 2B: Telegram Interactive Approval Gateway",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🛡️ 1. Authentication Check\nIntercepts the inline button click from Telegram (Approve or Revise), parses the Callback Data (Action + Client ID), and strictly checks Supabase to ensure the user clicking the button is still an active Admin or Strategist.",
+        "height": 396,
+        "width": 946,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1120,
+        96
+      ],
+      "id": "76f520b0-b003-44a7-8c96-059e288a4feb",
+      "name": "Sticky Note 1"
+    },
+    {
+      "parameters": {
+        "content": "## ✅ 2. APPROVE PATH\nUpdates the Supabase Content Calendar to `Plan_Approved`, fetches the target Google Sheet ID, updates the Sheet to match the approved status, and finally sends a success confirmation message back to the user on Telegram.",
+        "height": 320,
+        "width": 1828,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        256,
+        -208
+      ],
+      "id": "340fd4a3-73b0-4ecf-a456-6c24900880c2",
+      "name": "Sticky Note 2"
+    },
+    {
+      "parameters": {
+        "content": "## ✏️ 3. REVISION PATH\nUpdates both the Client profile and the Content Calendar entries in Supabase to `Revision_Requested` and flags them for revision. It then prompts the user via Telegram to explain exactly which days need to be changed.",
+        "height": 352,
+        "width": 992,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        256,
+        144
+      ],
+      "id": "7d5b8780-3dcf-48a3-9278-80053d5035b0",
+      "name": "Sticky Note 3"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Authorized_Users",
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "telegram_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Logic: Parse Callback Data').item.json.telegram_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        240
+      ],
+      "id": "9212bcbc-97d1-47d7-b9f3-8531debacdd9",
+      "name": "DB: Check User Role",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "errorMessage": "Unauthorized access attempt blocked"
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        96,
+        432
+      ],
+      "id": "ee330934-ef9f-47be-9285-5e75c545644a",
+      "name": "Stop and Error"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Content_Calendar",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Logic: Parse Callback Data').item.json.client_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "Plan_Approved"
+            },
+            {
+              "fieldId": "approved_by",
+              "fieldValue": "={{ $('Logic: Parse Callback Data').item.json.telegram_id }}"
+            },
+            {
+              "fieldId": "approved_at",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        384,
+        -96
+      ],
+      "id": "c693ba21-5bc3-4af6-a35d-2a68b3dbb67b",
+      "name": "DB: Set Calendar to Plan_Approved",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Logic: Parse Callback Data').item.json.chat_id }}",
+        "text": "✅ *Plan Approved!* All 30 posts for client have been approved and moved to production.  Phase 3 will now begin generating content assets.",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1856,
+        -96
+      ],
+      "id": "a1a46b03-cd7e-47c9-899f-313180d42296",
+      "name": "Telegram: Send Approval Success",
+      "webhookId": "23111260-f2d0-4966-b8b1-0e0010a6bd61",
+      "credentials": {
+        "telegramApi": {
+          "id": "Gg4nrOPfTddNGNV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $('DB: Get Client Sheets ID').first().json.sheets_id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Content Calendar",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": 0,
+            "Day Number": "={{ $json['Day Number'] }}",
+            "Status": "Plan_Approved"
+          },
+          "matchingColumns": [
+            "Day Number"
+          ],
+          "schema": [
+            {
+              "id": "Day Number",
+              "displayName": "Day Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Format",
+              "displayName": "Format",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Core Topic",
+              "displayName": "Core Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Image Description",
+              "displayName": "Image Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Keywords",
+              "displayName": "Keywords",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "CTA",
+              "displayName": "CTA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Posting Date",
+              "displayName": "Posting Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 1",
+              "displayName": "Slide 1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 2",
+              "displayName": "Slide 2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 3",
+              "displayName": "Slide 3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 4",
+              "displayName": "Slide 4",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 5",
+              "displayName": "Slide 5",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 6",
+              "displayName": "Slide 6",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Slide 7",
+              "displayName": "Slide 7",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1440,
+        -96
+      ],
+      "id": "3559fae9-0a02-420c-a1f8-0098f707c2b5",
+      "name": "Sheets: Set Rows to Plan_Approved",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "cxrImtgrJYgfX5Xt",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "Clients",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "keyValue": "={{ $('Logic: Parse Callback Data').item.json.client_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        800,
+        -96
+      ],
+      "id": "a03ef949-5de0-447e-87aa-b0187296a426",
+      "name": "DB: Get Client Sheets ID",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Clients",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Logic: Parse Callback Data').item.json.client_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "Plan_Approved"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        592,
+        -96
+      ],
+      "id": "abacc508-f2b1-433f-a535-ced2b148cbb5",
+      "name": "DB: Set Client Status to Plan_Approved",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Logic: Parse Callback Data').item.json.chat_id }}",
+        "text": "⛔ You are not authorized to perform this action.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -96,
+        432
+      ],
+      "id": "91ee2b2c-b4f4-4dda-a19f-bf93e3008562",
+      "name": "Telegram: Send Unauthorized Alert",
+      "webhookId": "0fffc7ed-2497-4602-bbf7-5c93079fe328",
+      "credentials": {
+        "telegramApi": {
+          "id": "Gg4nrOPfTddNGNV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const callbackQuery = $input.first().json.callback_query;\nconst callbackData = callbackQuery.data;\n\n// Split on | separator\nconst parts = callbackData.split('|');\nconst action = parts[0];   // APPROVE or REVISE\nconst clientId = parts[1]; // UUID\n\nreturn [{\n  json: {\n    action: action,\n    client_id: clientId,\n    callback_query_id: callbackQuery.id,\n    chat_id: callbackQuery.message.chat.id,\n    telegram_id: callbackQuery.from.id,\n    message_id: callbackQuery.message.message_id\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -832,
+        240
+      ],
+      "id": "cda0a223-c4be-427e-a940-56d897036022",
+      "name": "Logic: Parse Callback Data"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Logic: Parse Callback Data').item.json.chat_id }}",
+        "text": "✏️ *Revision Requested* Please reply with the Day numbers that need revision and your comments.  Example: Day 3, Day 7 — make the tone more casual",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        368,
+        304
+      ],
+      "id": "06ea3d44-2601-451f-b30b-f6ec3386edaf",
+      "name": "Telegram: Ask for Revision Details",
+      "webhookId": "d5363f9a-caec-41a0-bd16-2e0cc6083305",
+      "credentials": {
+        "telegramApi": {
+          "id": "Gg4nrOPfTddNGNV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0bffd00b-6e9f-404b-8fa3-ed3415dc552a",
+              "leftValue": "={{ $('Logic: Parse Callback Data').item.json.action }}",
+              "rightValue": "APPROVE",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        80,
+        96
+      ],
+      "id": "6b9c3696-07c1-4961-8623-93cb67f2b3c9",
+      "name": "Route: Approve or Revise?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7a3560f7-5d0b-4bdc-8ef6-15ec9a7ff3b1",
+              "leftValue": "={{ $json.is_active }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "b3f098ab-30e4-4ea6-ab72-881b2123d47f",
+              "leftValue": "={{ ['Admin', 'Strategist'].includes($json.role) }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -368,
+        240
+      ],
+      "id": "727c69c0-5225-42d1-a1ab-79e46adb4164",
+      "name": "Logic: Is Authorized?"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Content_Calendar",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "client_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Logic: Parse Callback Data').item.json.client_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1008,
+        -96
+      ],
+      "id": "cc6050f1-2956-40a7-9a15-49fdb299f6cf",
+      "name": "DB: Fetch Calendar Rows",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c304f63a-3631-4379-811f-dcf4aeb9d645",
+              "name": "Day Number",
+              "value": "={{ $json.day_number }}",
+              "type": "string"
+            },
+            {
+              "id": "140d3bf2-0c0d-4102-9be4-07c7310a052d",
+              "name": "Status",
+              "value": "Plan_Approved",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1216,
+        -96
+      ],
+      "id": "4a6b9dff-5372-43b0-b7dd-be613a3b7475",
+      "name": "Logic: Map Values for Sheets"
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $('Logic: Parse Callback Data').item.json.callback_query_id }}",
+        "additionalFields": {
+          "text": "Processing your request..."
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -112,
+        96
+      ],
+      "id": "0af66f95-0e57-422c-aee7-9938f98225aa",
+      "name": "Telegram: Stop Button Spinner",
+      "webhookId": "8cb6b91b-e0e9-41d9-9b81-4d59c48c3ce4",
+      "credentials": {
+        "telegramApi": {
+          "id": "Gg4nrOPfTddNGNV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "results",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1648,
+        -96
+      ],
+      "id": "e8aadb3e-d4d5-43c3-b474-202cacc5eac5",
+      "name": "Aggregate all Messages into one"
+    },
+    {
+      "parameters": {
+        "tableId": "pending_revisions",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "telegram_id",
+              "fieldValue": "={{ $('Logic: Parse Callback Data').item.json.telegram_id }}"
+            },
+            {
+              "fieldId": "client_id",
+              "fieldValue": "={{ $('Logic: Parse Callback Data').item.json.client_id }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        800,
+        304
+      ],
+      "id": "90673b2e-21a7-4549-a239-2f1b9501ab20",
+      "name": "Update the pending_revision table",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1040,
+        240
+      ],
+      "id": "56515ef0-9912-4050-86c8-701c909f4b23",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "content": "## 🛡️ PHASE 2B: PLAN APPROVAL & REVISION INITIALIZER\n\n### 📌 OVERVIEW\nIntelligent triage engine triggered by the **Master Router** via `Execute Workflow Trigger`. Captures inline interactive button data (`APPROVE` or `REVISE`), applies strict role-based access control, forks the execution logic into two operational paths, and establishes interactive session states.\n\n---\n\n### 🗺️ ARCHITECTURAL FLOW & BLOCKS\n\n#### 🛡️ 1. Authentication Check & Intake\n- **Trigger Ingestion:** Accepts incoming Telegram payloads containing context-specific string expressions.\n- **Callback Parsing:** Splices incoming data blocks using vertical bars (`|`) to isolate structural variables (`action`, `client_id`).\n- **RBAC Security Gate:** Queries `Authorized_Users` to verify if the clicking user has active `Admin` or `Strategist` properties. Unauthorized clicks trigger immediate routing kills via a `Stop and Error` node.\n\n#### 🔀 2. Routing Logic Fork\n- **Acknowledge:** Dispatches a clean fallback call to flush the Telegram keyboard loader layout instantly.\n- **Conditional Branching:** Evaluates the extracted variable parameters to fork execution streams:\n  • `action == APPROVE` ➡️ Route to the **Approval Pipeline**\n  • `action == REVISE` ➡️ Route to the **Revision Initializer Pipeline**\n\n#### ✅ 3. Production Approval Path\n- **Supabase Sync Loop:** Modifies target `Content_Calendar` structures to set day statuses to `Plan_Approved`. Sets project tables on the `Clients` record to match the approved milestone.\n- **Workspace Compilation:** Fetches the spreadsheet ID, maps key values across explicit schemas, and programmatically locks corresponding cells in Google Sheets to `Plan_Approved`.\n- **Handoff:** Aggregates background loop sequences and fires a confirmation string to Telegram signaling the initialization of the Production phases.\n\n#### ✏️ 4. State Machine Revision Path\n- **User Prompting:** Dispatches an immediate Markdown prompt via Telegram requesting granular day references and formatting instructions.\n- **Database Progression:** Shifts status metrics on both `Clients` and all `Content_Calendar` day rows to `Revision_Requested`.\n- **Session Locking (The Fix):** Injects a fresh data record containing the `telegram_id` and target `client_id` directly into the `Pending_Revisions` lookup table. This locks the admin into an active session state, safely priming the system to capture their upcoming plain-text reply text.",
+        "height": 1808,
+        "width": 3616,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1392,
+        -1024
+      ],
+      "id": "50466046-c388-4987-9124-bc1aab214157",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "Clients",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Logic: Parse Callback Data').item.json.client_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "Revision_Requested"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        576,
+        304
+      ],
+      "id": "c6c9f402-992b-402a-9ea0-9d8619ab6332",
+      "name": "DB: Set Client to Revision_Requested",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FP7wqlyudDoiEtSc",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "update_id": 592308346,
+          "callback_query": {
+            "id": "7739469316465031195",
+            "from": {
+              "id": 8244436566,
+              "is_bot": false,
+              "first_name": "Naeem",
+              "username": "afsa_telegram",
+              "language_code": "en"
+            },
+            "message": {
+              "message_id": 2248,
+              "from": {
+                "id": 8722164151,
+                "is_bot": true,
+                "first_name": "afsa content bot",
+                "username": "afsa_content_managment_bot"
+              },
+              "chat": {
+                "id": 8244436566,
+                "first_name": "Naeem",
+                "username": "afsa_telegram",
+                "type": "private"
+              },
+              "date": 1778766379,
+              "text": "=📋 30-Day Content Plan Ready\n\nClient: BoehmTech\n\n📄 Review the 30-Day Content Plan\n\nPlease review and take action 👇",
+              "entities": [
+                {
+                  "offset": 4,
+                  "length": 25,
+                  "type": "bold"
+                },
+                {
+                  "offset": 53,
+                  "length": 30,
+                  "type": "text_link",
+                  "url": "https://docs.google.com/document/d/1B9G6jVCEy31LJoi8cag_QWerPXLTbcQw1Lq2mvo59Z4/edit"
+                }
+              ],
+              "link_preview_options": {
+                "is_disabled": true
+              },
+              "reply_markup": {
+                "inline_keyboard": [
+                  [
+                    {
+                      "text": "✅ Approve Plan",
+                      "callback_data": "APPROVE|92fb32f2-216f-4633-a30c-18eabc93e59d"
+                    },
+                    {
+                      "text": "✏️ Request Revision",
+                      "callback_data": "REVISE|92fb32f2-216f-4633-a30c-18eabc93e59d"
+                    }
+                  ]
+                ]
+              }
+            },
+            "chat_instance": "-5902708633581404860",
+            "data": "REVISE|92fb32f2-216f-4633-a30c-18eabc93e59d"
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "DB: Check User Role": {
+      "main": [
+        [
+          {
+            "node": "Logic: Is Authorized?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Set Calendar to Plan_Approved": {
+      "main": [
+        [
+          {
+            "node": "DB: Set Client Status to Plan_Approved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheets: Set Rows to Plan_Approved": {
+      "main": [
+        [
+          {
+            "node": "Aggregate all Messages into one",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Get Client Sheets ID": {
+      "main": [
+        [
+          {
+            "node": "DB: Fetch Calendar Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Set Client Status to Plan_Approved": {
+      "main": [
+        [
+          {
+            "node": "DB: Get Client Sheets ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram: Send Unauthorized Alert": {
+      "main": [
+        [
+          {
+            "node": "Stop and Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logic: Parse Callback Data": {
+      "main": [
+        [
+          {
+            "node": "DB: Check User Role",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram: Ask for Revision Details": {
+      "main": [
+        [
+          {
+            "node": "DB: Set Client to Revision_Requested",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route: Approve or Revise?": {
+      "main": [
+        [
+          {
+            "node": "DB: Set Calendar to Plan_Approved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram: Ask for Revision Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logic: Is Authorized?": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Stop Button Spinner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram: Send Unauthorized Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Fetch Calendar Rows": {
+      "main": [
+        [
+          {
+            "node": "Logic: Map Values for Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logic: Map Values for Sheets": {
+      "main": [
+        [
+          {
+            "node": "Sheets: Set Rows to Plan_Approved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram: Stop Button Spinner": {
+      "main": [
+        [
+          {
+            "node": "Route: Approve or Revise?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate all Messages into one": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Send Approval Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Logic: Parse Callback Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update the pending_revision table": {
+      "main": [
+        []
+      ]
+    },
+    "DB: Set Client to Revision_Requested": {
+      "main": [
+        [
+          {
+            "node": "Update the pending_revision table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "72f31e0c-7117-4bbd-9626-70dd7fbf40cd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "27691624a7c7d2a9124a20717f3db6f18f26825f3de4bc41f1be750963b9ae26"
+  },
+  "id": "TUeDSwccCC8uB39p",
+  "tags": []
+}
